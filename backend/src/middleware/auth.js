@@ -1,33 +1,77 @@
-/**
- * JWT Authentication & Role Authorization Middleware — /src/middleware/auth.js
- *
- * Single-Shop Architecture:
- * - Roles: 'admin' (Shop Owner) and 'painter' (Painter)
- * - JWT payload contains: { userId, role } (no shopId/tenantId)
- *
- * Rules:
- * - 'admin' has full management permissions.
- * - 'painter' has read-only access to their own profile, points, sales, and rewards.
- * - A painter must NEVER be allowed to execute admin APIs.
- */
-
-// TODO: Implement protect() middleware using jsonwebtoken to verify Bearer token
-// and attach { userId, role } to req.user
+import jwt from 'jsonwebtoken';
 
 /**
- * Middleware placeholder to verify JWT token.
+ * protect()
+ * ─────────
+ * Verifies a JWT from either:
+ *   1. Authorization: Bearer <token>  (REST clients, Postman, future mobile)
+ *   2. auth_token httpOnly cookie     (browser sessions)
+ *
+ * On success, attaches { userId, role } to req.user and calls next().
+ * On failure, returns 401 Unauthorized.
  */
 const protect = (req, res, next) => {
-  // TODO: Extract and verify JWT token; attach decoded { userId, role } to req.user
-  next();
+  try {
+    let token;
+
+    // 1. Check Authorization header first
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.split(' ')[1];
+    }
+
+    // 2. Fall back to httpOnly cookie
+    if (!token && req.cookies?.auth_token) {
+      token = req.cookies.auth_token;
+    }
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required. Please log in.',
+      });
+    }
+
+    // 3. Verify and decode the token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = { userId: decoded.userId, role: decoded.role };
+    next();
+  } catch (err) {
+    if (err.name === 'TokenExpiredError') {
+      return res.status(401).json({
+        success: false,
+        message: 'Session expired. Please log in again.',
+      });
+    }
+    return res.status(401).json({
+      success: false,
+      message: 'Invalid token. Please log in again.',
+    });
+  }
 };
 
 /**
- * Middleware placeholder to restrict access by role ('admin' | 'painter').
- * @param {...('admin' | 'painter')} roles - Allowed roles
+ * authorize(...roles)
+ * ───────────────────
+ * Role-based access control middleware.
+ * Must be used AFTER protect().
+ *
+ * Example usage:
+ *   router.delete('/painters/:id', protect, authorize('admin'), deleteHandler);
+ *   router.get('/me', protect, authorize('admin', 'painter'), getHandler);
+ *
+ * A painter calling an admin-only endpoint will receive 403 Forbidden.
+ * This enforces authorization at the API level — not just the UI.
+ *
+ * @param {...('admin'|'painter')} roles
  */
 const authorize = (...roles) => (req, res, next) => {
-  // TODO: Verify req.user.role is in allowed roles; return 403 Forbidden if not authorized
+  if (!req.user || !roles.includes(req.user.role)) {
+    return res.status(403).json({
+      success: false,
+      message: `Access denied. This action requires one of the following roles: ${roles.join(', ')}.`,
+    });
+  }
   next();
 };
 

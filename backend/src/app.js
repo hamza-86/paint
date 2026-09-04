@@ -1,19 +1,15 @@
 /**
  * Express Application Setup — /src/app.js
- *
- * Configures and exports the Express app instance.
- * Middleware, CORS, routing, and error handling are all wired here.
- * server.js imports this and binds it to a port.
  */
 
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
+import authRoutes from './routes/authRoutes.js';
 
 const app = express();
 
 // ── CORS ─────────────────────────────────────────────────────────────────────
-// Allow requests only from the configured frontend origin.
-// FRONTEND_URL is set in .env — defaults to localhost:3000 for local dev.
 const allowedOrigins = [
   process.env.FRONTEND_URL || 'http://localhost:3000',
 ];
@@ -21,7 +17,6 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (e.g. curl, Postman, server-to-server)
       if (!origin) return callback(null, true);
       if (allowedOrigins.includes(origin)) return callback(null, true);
       return callback(
@@ -29,18 +24,18 @@ app.use(
         false
       );
     },
-    credentials: true, // Allow cookies / Authorization headers
+    credentials: true, // Required for httpOnly cookies
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
 
-// ── Body Parsers ─────────────────────────────────────────────────────────────
-app.use(express.json({ limit: '10mb' }));          // Parse JSON bodies
-app.use(express.urlencoded({ extended: true }));   // Parse URL-encoded bodies
+// ── Body Parsers & Cookie Parser ──────────────────────────────────────────────
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser()); // Required to read httpOnly cookies in protect()
 
 // ── Health Check ─────────────────────────────────────────────────────────────
-// Used by Render's health checks and uptime monitors.
 app.get('/api/health', (req, res) => {
   res.status(200).json({
     status: 'ok',
@@ -49,10 +44,10 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// ── API Routes (Planned) ─────────────────────────────────────────────────────
-// TODO: Mount routers here, e.g.:
-//   import authRoutes from './routes/authRoutes.js';
-//   app.use('/api/auth', authRoutes);
+// ── API Routes ────────────────────────────────────────────────────────────────
+app.use('/api/auth', authRoutes);
+
+// TODO: Mount additional routers here as features are built:
 //   app.use('/api/painters', painterRoutes);
 //   app.use('/api/customers', customerRoutes);
 //   app.use('/api/items', itemRoutes);
@@ -70,7 +65,6 @@ app.use((req, res) => {
 });
 
 // ── Global Error Handler ─────────────────────────────────────────────────────
-// Must have 4 parameters for Express to treat it as an error handler.
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
   const statusCode = err.statusCode || 500;
