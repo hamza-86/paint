@@ -1,0 +1,42 @@
+{
+  "name": "paint-shop-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Standalone backend API service for the Paint Shop Painter Management Platform",
+  "main": "server.js",
+  "scripts": {
+    "dev": "nodemon server.js",
+    "start": "node server.js"
+  },
+  "keywords": [
+    "paint-shop",
+    "saas",
+    "express",
+    "mongodb"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cloudinary": "^2.11.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^9.9.4"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  },
+  "nodemonConfig": {
+    "watch": [
+      "src",
+      "server.js"
+    ],
+    "ext": "js,json",
+    "ignore": [
+      "node_modules"
+    ],
+    "delay": "500"
+  }
+}

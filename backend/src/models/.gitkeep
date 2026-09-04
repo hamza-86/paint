@@ -1,0 +1,2 @@
+// Mongoose models go here (Phase 2)
+// Each entity gets its own file: User.js, Shop.js, Painter.js, Job.js, etc.

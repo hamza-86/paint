@@ -1,0 +1,6 @@
+// Shared, reusable React components go here.
+// Examples: Button.js, Modal.js, Navbar.js, Card.js, etc.
+// Organize into subdirectories as the component library grows:
+//   /components/ui/       → primitive UI elements
+//   /components/layout/   → layout wrappers, sidebars, navbars
+//   /components/forms/    → form inputs, validation wrappers

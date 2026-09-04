@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+/* ============================================================
+   Paint Shop Painter Management Platform — Global Styles
+   ============================================================
+   Design tokens and base resets are defined here.
+   Component-specific styles should live in their own files.
+   ============================================================ */
+
+:root {
+  /* Brand color palette */
+  --color-primary: hsl(217, 91%, 60%);        /* Vivid blue */
+  --color-primary-dark: hsl(217, 91%, 45%);
+  --color-accent: hsl(38, 92%, 55%);           /* Warm amber / paint-inspired */
+  --color-accent-dark: hsl(38, 92%, 42%);
+  --color-success: hsl(142, 71%, 45%);
+  --color-warning: hsl(38, 92%, 55%);
+  --color-danger: hsl(0, 84%, 60%);
+
+  /* Surface & background */
+  --color-bg: hsl(220, 20%, 97%);
+  --color-surface: hsl(0, 0%, 100%);
+  --color-surface-muted: hsl(220, 14%, 94%);
+  --color-border: hsl(220, 13%, 87%);
+
+  /* Typography */
+  --color-text-primary: hsl(220, 25%, 10%);
+  --color-text-secondary: hsl(220, 15%, 45%);
+  --color-text-muted: hsl(220, 10%, 65%);
+
+  /* Spacing & radius tokens */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+}
+
+/* Base reset */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Focus styles for accessibility */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+/* Smooth transitions for interactive elements */
+a,
+button {
+  transition: color 0.15s ease, background-color 0.15s ease,
+    box-shadow 0.15s ease, opacity 0.15s ease;
+}
