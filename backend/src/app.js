@@ -6,6 +6,11 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import authRoutes from './routes/authRoutes.js';
+import painterRoutes from './routes/painterRoutes.js';
+import itemRoutes from './routes/itemRoutes.js';
+import cycleRoutes from './routes/cycleRoutes.js';
+import saleRoutes from './routes/saleRoutes.js';
+import customerRoutes from './routes/customerRoutes.js';
 
 const app = express();
 
@@ -46,13 +51,15 @@ app.get('/api/health', (req, res) => {
 
 // ── API Routes ────────────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
+app.use('/api/painters', painterRoutes);
+app.use('/api/items', itemRoutes);
+app.use('/api/cycles', cycleRoutes);
+app.use('/api/sales', saleRoutes);
+app.use('/api/customers', customerRoutes);
 
 // TODO: Mount additional routers here as features are built:
-//   app.use('/api/painters', painterRoutes);
 //   app.use('/api/customers', customerRoutes);
-//   app.use('/api/items', itemRoutes);
 //   app.use('/api/sales', saleRoutes);
-//   app.use('/api/cycles', cycleRoutes);
 //   app.use('/api/rewards', rewardRoutes);
 //   app.use('/api/companies', companyRoutes);
 

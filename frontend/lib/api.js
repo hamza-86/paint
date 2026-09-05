@@ -65,3 +65,253 @@ export function getMeApi() {
 export function logoutApi() {
   return apiFetch('/auth/logout', { method: 'POST' });
 }
+
+// ── Painter endpoints ─────────────────────────────────────────────────────────
+
+/**
+ * GET /api/painters
+ * @param {{ page?: number, limit?: number, search?: string, status?: string }} params
+ */
+export function getPaintersApi({ page = 1, limit = 20, search = '', status = 'all' } = {}) {
+  const query = new URLSearchParams();
+  if (page) query.set('page', String(page));
+  if (limit) query.set('limit', String(limit));
+  if (search && search.trim()) query.set('search', search.trim());
+  if (status && status !== 'all') query.set('status', status);
+
+  const queryString = query.toString();
+  return apiFetch(`/painters${queryString ? `?${queryString}` : ''}`);
+}
+
+/**
+ * GET /api/painters/:id
+ * @param {string} id
+ */
+export function getPainterByIdApi(id) {
+  return apiFetch(`/painters/${id}`);
+}
+
+/**
+ * POST /api/painters
+ * @param {{ firstName: string, mobile: string, email: string, password: string, photoUrl?: string }} data
+ */
+export function createPainterApi(data) {
+  return apiFetch('/painters', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * PATCH /api/painters/:id/deactivate
+ * @param {string} id
+ */
+export function deactivatePainterApi(id) {
+  return apiFetch(`/painters/${id}/deactivate`, {
+    method: 'PATCH',
+  });
+}
+
+/**
+ * PATCH /api/painters/:id/activate
+ * @param {string} id
+ */
+export function activatePainterApi(id) {
+  return apiFetch(`/painters/${id}/activate`, {
+    method: 'PATCH',
+  });
+}
+
+/**
+ * GET /api/items
+ * @param {{ page?: number, limit?: number, search?: string, status?: string, category?: string, brand?: string }} params
+ */
+export function getItemsApi({ page = 1, limit = 20, search = '', status = 'all', category = 'all', brand = 'all' } = {}) {
+  const query = new URLSearchParams();
+  if (page) query.set('page', String(page));
+  if (limit) query.set('limit', String(limit));
+  if (search && search.trim()) query.set('search', search.trim());
+  if (status && status !== 'all') query.set('status', status);
+  if (category && category !== 'all') query.set('category', category.trim());
+  if (brand && brand !== 'all') query.set('brand', brand.trim());
+
+  const queryString = query.toString();
+  return apiFetch(`/items${queryString ? `?${queryString}` : ''}`);
+}
+
+/**
+ * GET /api/items/:id
+ * @param {string} id
+ */
+export function getItemByIdApi(id) {
+  return apiFetch(`/items/${id}`);
+}
+
+/**
+ * POST /api/items
+ * @param {{ name: string, price: number, points: number, brand?: string, category?: string, imageUrl?: string }} data
+ */
+export function createItemApi(data) {
+  return apiFetch('/items', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * PATCH /api/items/:id
+ * @param {string} id
+ * @param {object} data
+ */
+export function updateItemApi(id, data) {
+  return apiFetch(`/items/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * PATCH /api/items/:id/deactivate
+ * @param {string} id
+ */
+export function deactivateItemApi(id) {
+  return apiFetch(`/items/${id}/deactivate`, {
+    method: 'PATCH',
+  });
+}
+
+/**
+ * PATCH /api/items/:id/activate
+ * @param {string} id
+ */
+/**
+ * GET /api/items/:id/activate
+ * @param {string} id
+ */
+export function activateItemApi(id) {
+  return apiFetch(`/items/${id}/activate`, {
+    method: 'PATCH',
+  });
+}
+
+// ── Cycle API ─────────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/cycles
+ * @param {{ page?: number, limit?: number }} params
+ */
+export function getCyclesApi({ page = 1, limit = 10 } = {}) {
+  const query = new URLSearchParams();
+  query.set('page', String(page));
+  query.set('limit', String(limit));
+  return apiFetch(`/cycles?${query.toString()}`);
+}
+
+/**
+ * GET /api/cycles/:id
+ * @param {string} id
+ */
+export function getCycleByIdApi(id) {
+  return apiFetch(`/cycles/${id}`);
+}
+
+/**
+ * POST /api/cycles
+ * @param {{ startDate: string, endDate: string, isActive?: boolean }} data
+ */
+export function createCycleApi(data) {
+  return apiFetch('/cycles', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * PATCH /api/cycles/:id/activate
+ * @param {string} id
+ */
+export function activateCycleApi(id) {
+  return apiFetch(`/cycles/${id}/activate`, {
+    method: 'PATCH',
+  });
+}
+
+/**
+ * PATCH /api/cycles/:id/close
+ * @param {string} id
+ */
+export function closeCycleApi(id) {
+  return apiFetch(`/cycles/${id}/close`, {
+    method: 'PATCH',
+  });
+}
+
+// ── Sales API ─────────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/sales
+ * @param {{ page?: number, limit?: number, cycleId?: string, painterId?: string, customerId?: string, search?: string }} params
+ */
+export function getSalesApi({
+  page = 1,
+  limit = 10,
+  cycleId,
+  painterId,
+  customerId,
+  search = '',
+} = {}) {
+  const query = new URLSearchParams();
+  if (page) query.set('page', String(page));
+  if (limit) query.set('limit', String(limit));
+  if (cycleId) query.set('cycleId', cycleId);
+  if (painterId) query.set('painterId', painterId);
+  if (customerId) query.set('customerId', customerId);
+  if (search && search.trim()) query.set('search', search.trim());
+
+  const qs = query.toString();
+  return apiFetch(`/sales${qs ? `?${qs}` : ''}`);
+}
+
+/**
+ * GET /api/sales/:id
+ * @param {string} id
+ */
+export function getSaleByIdApi(id) {
+  return apiFetch(`/sales/${id}`);
+}
+
+/**
+ * POST /api/sales
+ * @param {{ painterId: string, customer: { name: string, mobile: string }, lineItems: Array<{ itemId: string, quantity: number }>, date?: string, billImageUrl?: string }} data
+ */
+export function createSaleApi(data) {
+  return apiFetch('/sales', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+// ── Customers API ─────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/customers
+ * @param {{ page?: number, limit?: number, search?: string }} params
+ */
+export function getCustomersApi({ page = 1, limit = 20, search = '' } = {}) {
+  const query = new URLSearchParams();
+  if (page) query.set('page', String(page));
+  if (limit) query.set('limit', String(limit));
+  if (search && search.trim()) query.set('search', search.trim());
+
+  const qs = query.toString();
+  return apiFetch(`/customers${qs ? `?${qs}` : ''}`);
+}
+
+/**
+ * GET /api/customers/:id
+ * @param {string} id
+ */
+export function getCustomerByIdApi(id) {
+  return apiFetch(`/customers/${id}`);
+}
+

@@ -12,13 +12,36 @@ const lineItemSchema = new mongoose.Schema(
       required: [true, 'Quantity is required'],
       min: [1, 'Quantity must be at least 1'],
     },
+    // Price snapshot at time of sale — immutable historical record
+    pricePerUnit: {
+      type: Number,
+      required: true,
+      min: [0, 'Price per unit cannot be negative'],
+    },
+    // Points snapshot at time of sale — immutable historical record
+    pointsPerUnit: {
+      type: Number,
+      required: true,
+      min: [0, 'Points per unit cannot be negative'],
+    },
     pointsEarned: {
       type: Number,
-      required: [true, 'Points earned is required'],
-      min: [0, 'Points cannot be negative'],
+      required: true,
+      min: [0, 'Points earned cannot be negative'],
+    },
+    lineTotal: {
+      type: Number,
+      required: true,
+      min: [0, 'Line total cannot be negative'],
+    },
+    // Item name snapshot for display without relying on Item document
+    itemName: {
+      type: String,
+      required: true,
+      trim: true,
     },
   },
-  { _id: true }
+  { _id: false }
 );
 
 const saleSchema = new mongoose.Schema(
@@ -26,43 +49,48 @@ const saleSchema = new mongoose.Schema(
     painterId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Painter',
-      required: [true, 'Painter ID is required'],
+      required: [true, 'Painter is required'],
       index: true,
     },
     customerId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Customer',
-      required: [true, 'Customer ID is required'],
+      required: [true, 'Customer is required'],
       index: true,
     },
     cycleId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Cycle',
-      required: [true, 'Cycle ID is required'],
+      required: [true, 'Cycle is required'],
       index: true,
     },
     date: {
       type: Date,
-      default: Date.now,
+      required: [true, 'Sale date is required'],
       index: true,
     },
     billImageUrl: {
       type: String,
       default: '',
+      trim: true,
     },
     lineItems: {
       type: [lineItemSchema],
+      required: true,
       validate: {
-        validator: function (items) {
-          return items && items.length > 0;
-        },
-        message: 'Sale must have at least one line item',
+        validator: (arr) => Array.isArray(arr) && arr.length > 0,
+        message: 'A sale must have at least one line item.',
       },
     },
     totalPoints: {
       type: Number,
-      required: [true, 'Total points are required'],
+      required: true,
       min: [0, 'Total points cannot be negative'],
+    },
+    totalAmount: {
+      type: Number,
+      required: true,
+      min: [0, 'Total amount cannot be negative'],
     },
   },
   {
@@ -70,9 +98,12 @@ const saleSchema = new mongoose.Schema(
   }
 );
 
-// Compound indexes for common queries
-saleSchema.index({ painterId: 1, cycleId: 1 });
-saleSchema.index({ cycleId: 1, date: -1 });
+// Transform output to map _id to id
+saleSchema.methods.toJSON = function () {
+  const sale = this.toObject();
+  sale.id = String(sale._id);
+  return sale;
+};
 
 const Sale = mongoose.models.Sale || mongoose.model('Sale', saleSchema);
 

@@ -11,6 +11,7 @@ const itemSchema = new mongoose.Schema(
     imageUrl: {
       type: String,
       default: '',
+      trim: true,
     },
     price: {
       type: Number,
@@ -24,13 +25,22 @@ const itemSchema = new mongoose.Schema(
     },
     brand: {
       type: String,
-      required: [true, 'Brand is required'],
+      default: '',
       trim: true,
     },
     category: {
       type: String,
-      required: [true, 'Category is required'],
+      default: '',
       trim: true,
+    },
+    status: {
+      type: String,
+      enum: {
+        values: ['active', 'deactivated'],
+        message: '{VALUE} is not a valid status',
+      },
+      default: 'active',
+      index: true,
     },
   },
   {
@@ -38,8 +48,16 @@ const itemSchema = new mongoose.Schema(
   }
 );
 
+// Indexes for searching and filtering
 itemSchema.index({ name: 1, brand: 1 });
 itemSchema.index({ category: 1 });
+
+// Transform output to map _id to id
+itemSchema.methods.toJSON = function () {
+  const item = this.toObject();
+  item.id = String(item._id);
+  return item;
+};
 
 const Item = mongoose.models.Item || mongoose.model('Item', itemSchema);
 

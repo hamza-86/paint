@@ -13,6 +13,7 @@ const painterSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Mobile number is required'],
       trim: true,
+      index: true,
     },
     email: {
       type: String,
@@ -45,6 +46,11 @@ const painterSchema = new mongoose.Schema(
       default: 'active',
       index: true,
     },
+    currentCycleId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Cycle',
+      default: null,
+    },
   },
   {
     timestamps: true,
@@ -65,9 +71,10 @@ painterSchema.methods.comparePassword = async function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };
 
-// Strip password from output
+// Strip password from output and map _id to id
 painterSchema.methods.toJSON = function () {
   const painter = this.toObject();
+  painter.id = String(painter._id);
   delete painter.password;
   return painter;
 };
