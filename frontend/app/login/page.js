@@ -169,7 +169,7 @@ const styles = {
     background: 'hsl(222, 28%, 8%)',
     position: 'relative',
     overflow: 'hidden',
-    fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
+    fontFamily: "var(--font-geist-sans), 'Inter', 'Segoe UI', system-ui, sans-serif",
   },
   // Floating accent blobs
   blob1: {

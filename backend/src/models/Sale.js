@@ -98,6 +98,9 @@ const saleSchema = new mongoose.Schema(
   }
 );
 
+// Compound index for painter history queries and cycle-filtered sales
+saleSchema.index({ painterId: 1, cycleId: 1, date: -1 });
+
 // Transform output to map _id to id
 saleSchema.methods.toJSON = function () {
   const sale = this.toObject();

@@ -315,3 +315,119 @@ export function getCustomerByIdApi(id) {
   return apiFetch(`/customers/${id}`);
 }
 
+// ── Painter History API (Part 7) ──────────────────────────────────────────────
+
+/**
+ * GET /api/painter-history/:painterId
+ * Overall summary & current cycle performance
+ * @param {string} painterId
+ */
+export function getPainterHistoryApi(painterId) {
+  return apiFetch(`/painter-history/${painterId}`);
+}
+
+/**
+ * GET /api/painter-history/:painterId/cycles
+ * Cycle-wise history breakdown
+ * @param {string} painterId
+ */
+export function getPainterHistoryCyclesApi(painterId) {
+  return apiFetch(`/painter-history/${painterId}/cycles`);
+}
+
+/**
+ * GET /api/painter-history/:painterId/sales
+ * Paginated sales list for this painter
+ * @param {string} painterId
+ * @param {{ page?: number, limit?: number, cycleId?: string, search?: string }} params
+ */
+export function getPainterHistorySalesApi(
+  painterId,
+  { page = 1, limit = 10, cycleId = '', search = '' } = {}
+) {
+  const query = new URLSearchParams();
+  if (page) query.set('page', String(page));
+  if (limit) query.set('limit', String(limit));
+  if (cycleId && cycleId !== 'all') query.set('cycleId', cycleId);
+  if (search && search.trim()) query.set('search', search.trim());
+
+  const qs = query.toString();
+  return apiFetch(`/painter-history/${painterId}/sales${qs ? `?${qs}` : ''}`);
+}
+
+// ── Reward Tiers API (Part 8) ─────────────────────────────────────────────────
+
+/**
+ * GET /api/reward-tiers
+ * @param {{ page?: number, limit?: number, status?: string }} params
+ */
+export function getRewardTiersApi({ page = 1, limit = 10, status = 'all' } = {}) {
+  const query = new URLSearchParams();
+  if (page) query.set('page', String(page));
+  if (limit) query.set('limit', String(limit));
+  if (status && status !== 'all') query.set('status', status);
+
+  const qs = query.toString();
+  return apiFetch(`/reward-tiers${qs ? `?${qs}` : ''}`);
+}
+
+/**
+ * GET /api/reward-tiers/:id
+ * @param {string} id
+ */
+export function getRewardTierApi(id) {
+  return apiFetch(`/reward-tiers/${id}`);
+}
+
+/**
+ * POST /api/reward-tiers
+ * @param {{ minPoints: number, maxPoints: number, suggestedRewardName: string }} data
+ */
+export function createRewardTierApi(data) {
+  return apiFetch('/reward-tiers', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * PATCH /api/reward-tiers/:id
+ * @param {string} id
+ * @param {{ minPoints?: number, maxPoints?: number, suggestedRewardName?: string }} data
+ */
+export function updateRewardTierApi(id, data) {
+  return apiFetch(`/reward-tiers/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * PATCH /api/reward-tiers/:id/deactivate
+ * @param {string} id
+ */
+export function deactivateRewardTierApi(id) {
+  return apiFetch(`/reward-tiers/${id}/deactivate`, {
+    method: 'PATCH',
+  });
+}
+
+/**
+ * PATCH /api/reward-tiers/:id/activate
+ * @param {string} id
+ */
+export function activateRewardTierApi(id) {
+  return apiFetch(`/reward-tiers/${id}/activate`, {
+    method: 'PATCH',
+  });
+}
+
+/**
+ * GET /api/reward-tiers/painter/:painterId
+ * Calculates current reward eligibility for painter based on active cycle points
+ * @param {string} painterId
+ */
+export function getPainterCurrentRewardTierApi(painterId) {
+  return apiFetch(`/reward-tiers/painter/${painterId}`);
+}
+

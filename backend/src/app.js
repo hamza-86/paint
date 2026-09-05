@@ -11,6 +11,8 @@ import itemRoutes from './routes/itemRoutes.js';
 import cycleRoutes from './routes/cycleRoutes.js';
 import saleRoutes from './routes/saleRoutes.js';
 import customerRoutes from './routes/customerRoutes.js';
+import painterHistoryRoutes from './routes/painterHistoryRoutes.js';
+import rewardTierRoutes from './routes/rewardTierRoutes.js';
 
 const app = express();
 
@@ -56,6 +58,8 @@ app.use('/api/items', itemRoutes);
 app.use('/api/cycles', cycleRoutes);
 app.use('/api/sales', saleRoutes);
 app.use('/api/customers', customerRoutes);
+app.use('/api/painter-history', painterHistoryRoutes);
+app.use('/api/reward-tiers', rewardTierRoutes);
 
 // TODO: Mount additional routers here as features are built:
 //   app.use('/api/customers', customerRoutes);
