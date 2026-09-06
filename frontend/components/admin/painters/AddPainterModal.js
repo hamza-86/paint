@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useCreatePainter } from '@/lib/hooks/usePainters';
 
 export default function AddPainterModal({ isOpen, onClose, onSuccess }) {
@@ -13,10 +13,21 @@ export default function AddPainterModal({ isOpen, onClose, onSuccess }) {
     photoUrl: '',
   });
 
+  const [photoFile, setPhotoFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
   const [errors, setErrors] = useState({});
   const [serverError, setServerError] = useState('');
 
   const createPainterMutation = useCreatePainter();
+
+  // Cleanup object URL on unmount or file change
+  useEffect(() => {
+    return () => {
+      if (previewUrl && previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
 
   if (!isOpen) return null;
 
@@ -70,6 +81,34 @@ export default function AddPainterModal({ isOpen, onClose, onSuccess }) {
     }
   };
 
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        setErrors((prev) => ({ ...prev, photo: 'Only image files are allowed.' }));
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        setErrors((prev) => ({ ...prev, photo: 'File size must be under 5MB.' }));
+        return;
+      }
+      setPhotoFile(file);
+      if (previewUrl && previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrl);
+      }
+      setPreviewUrl(URL.createObjectURL(file));
+      setErrors((prev) => ({ ...prev, photo: undefined }));
+    }
+  };
+
+  const handleRemovePhoto = () => {
+    setPhotoFile(null);
+    if (previewUrl && previewUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    setPreviewUrl(null);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setServerError('');
@@ -77,13 +116,19 @@ export default function AddPainterModal({ isOpen, onClose, onSuccess }) {
     if (!validate()) return;
 
     try {
-      await createPainterMutation.mutateAsync({
-        firstName: formData.firstName.trim(),
-        mobile: formData.mobile.trim(),
-        email: formData.email.trim().toLowerCase(),
-        password: formData.password,
-        photoUrl: formData.photoUrl.trim() || undefined,
-      });
+      const payload = new FormData();
+      payload.append('firstName', formData.firstName.trim());
+      payload.append('mobile', formData.mobile.trim());
+      payload.append('email', formData.email.trim().toLowerCase());
+      payload.append('password', formData.password);
+
+      if (photoFile) {
+        payload.append('photo', photoFile);
+      } else if (formData.photoUrl.trim()) {
+        payload.append('photoUrl', formData.photoUrl.trim());
+      }
+
+      await createPainterMutation.mutateAsync(payload);
 
       // Reset state and close
       setFormData({
@@ -94,6 +139,7 @@ export default function AddPainterModal({ isOpen, onClose, onSuccess }) {
         confirmPassword: '',
         photoUrl: '',
       });
+      handleRemovePhoto();
       setErrors({});
       if (onSuccess) onSuccess();
       onClose();
@@ -105,12 +151,12 @@ export default function AddPainterModal({ isOpen, onClose, onSuccess }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div
-        className="w-full max-w-lg bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden"
+        className="w-full max-w-lg bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden my-auto max-h-[95vh] flex flex-col"
         role="dialog"
         aria-modal="true"
       >
         {/* Header */}
-        <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
+        <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between shrink-0">
           <div>
             <h2 className="text-lg font-bold text-slate-900">Add New Painter</h2>
             <p className="text-xs text-slate-500">
@@ -120,7 +166,7 @@ export default function AddPainterModal({ isOpen, onClose, onSuccess }) {
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+            className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
           >
             <svg
               className="w-5 h-5"
@@ -138,7 +184,7 @@ export default function AddPainterModal({ isOpen, onClose, onSuccess }) {
         </div>
 
         {/* Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto grow">
           {serverError && (
             <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-start gap-2">
               <svg
@@ -269,22 +315,60 @@ export default function AddPainterModal({ isOpen, onClose, onSuccess }) {
               )}
             </div>
 
-            {/* Photo URL (optional) */}
+            {/* Photo Upload with Live Preview */}
             <div className="sm:col-span-2">
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Photo URL <span className="text-slate-400 font-normal">(Optional)</span>
+                Profile Photo <span className="text-slate-400 font-normal">(Optional)</span>
               </label>
-              <input
-                type="url"
-                name="photoUrl"
-                value={formData.photoUrl}
-                onChange={handleChange}
-                placeholder="https://..."
-                className="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-200 bg-white focus:outline-hidden focus:ring-2 focus:border-blue-500 focus:ring-blue-100 transition-all"
-              />
-              <p className="mt-1 text-[11px] text-slate-400">
-                Direct image link. Direct file uploads will be connected via Cloudinary in an upcoming update.
-              </p>
+
+              <div className="flex items-center gap-4 p-3 rounded-xl border border-dashed border-slate-300 bg-slate-50/50">
+                {previewUrl ? (
+                  <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-blue-500 shadow-xs shrink-0 group">
+                    <img
+                      src={previewUrl}
+                      alt="Painter Preview"
+                      className="w-full h-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRemovePhoto}
+                      className="absolute inset-0 bg-slate-900/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-semibold cursor-pointer"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ) : (
+                  <div className="w-16 h-16 rounded-full bg-slate-200 flex items-center justify-center text-slate-400 shrink-0">
+                    <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                  </div>
+                )}
+
+                <div className="flex-1 min-w-0">
+                  <label className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg cursor-pointer transition-colors shadow-xs">
+                    <svg className="w-4 h-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="17 8 12 3 7 8" />
+                      <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg>
+                    <span>{photoFile ? 'Change Photo' : 'Upload Photo'}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                  </label>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    JPEG, PNG, WebP, GIF up to 5MB. Uploads securely to Cloudinary.
+                  </p>
+                  {errors.photo && (
+                    <p className="text-xs text-red-600 mt-1">{errors.photo}</p>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 

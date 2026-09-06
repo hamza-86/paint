@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRewardInventory } from '@/lib/hooks/useRewardInventory';
 
 export default function RewardTierModal({
   isOpen,
@@ -11,20 +12,36 @@ export default function RewardTierModal({
 }) {
   const [minPoints, setMinPoints] = useState('');
   const [maxPoints, setMaxPoints] = useState('');
+  const [suggestedInventoryItemId, setSuggestedInventoryItemId] = useState('');
   const [suggestedRewardName, setSuggestedRewardName] = useState('');
   const [error, setError] = useState('');
 
   const isEditing = Boolean(tier);
+
+  // Fetch active reward inventory products
+  const { data: invData, isLoading: loadingInventory } = useRewardInventory({
+    status: 'active',
+    limit: 100,
+  });
+
+  const inventoryItems = invData?.data || [];
 
   useEffect(() => {
     if (isOpen) {
       if (tier) {
         setMinPoints(String(tier.minPoints));
         setMaxPoints(String(tier.maxPoints));
+        setSuggestedInventoryItemId(
+          tier.suggestedInventoryItemId?.id ||
+          tier.suggestedInventoryItemId?._id ||
+          tier.suggestedInventoryItemId ||
+          ''
+        );
         setSuggestedRewardName(tier.suggestedRewardName || '');
       } else {
         setMinPoints('');
         setMaxPoints('');
+        setSuggestedInventoryItemId('');
         setSuggestedRewardName('');
       }
       setError('');
@@ -32,6 +49,17 @@ export default function RewardTierModal({
   }, [isOpen, tier]);
 
   if (!isOpen) return null;
+
+  const handleInventorySelect = (e) => {
+    const selectedId = e.target.value;
+    setSuggestedInventoryItemId(selectedId);
+    const item = inventoryItems.find((i) => (i.id || i._id) === selectedId);
+    if (item) {
+      setSuggestedRewardName(item.name);
+    } else {
+      setSuggestedRewardName('');
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -55,8 +83,8 @@ export default function RewardTierModal({
       return;
     }
 
-    if (!suggestedRewardName.trim()) {
-      setError('Please enter a suggested reward name (e.g. LCD TV, Smartphone).');
+    if (!suggestedInventoryItemId && !suggestedRewardName.trim()) {
+      setError('Please select a suggested reward product from Reward Inventory.');
       return;
     }
 
@@ -64,6 +92,7 @@ export default function RewardTierModal({
       await onSubmit({
         minPoints: min,
         maxPoints: max,
+        suggestedInventoryItemId: suggestedInventoryItemId || undefined,
         suggestedRewardName: suggestedRewardName.trim(),
       });
       onClose();
@@ -93,7 +122,7 @@ export default function RewardTierModal({
                 {isEditing ? 'Edit Reward Tier' : 'Create Reward Tier'}
               </h2>
               <p className="text-xs text-slate-400">
-                Configure point thresholds and suggested incentive
+                Configure point thresholds and suggested inventory reward
               </p>
             </div>
           </div>
@@ -101,7 +130,7 @@ export default function RewardTierModal({
             type="button"
             onClick={onClose}
             disabled={isSubmitting}
-            className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+            className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="18" y1="6" x2="6" y2="18" />
@@ -160,20 +189,40 @@ export default function RewardTierModal({
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              Suggested Reward Name <span className="text-red-500">*</span>
+            <label htmlFor="suggestedReward" className="block text-xs font-semibold text-slate-700 mb-1.5">
+              Suggested Reward <span className="text-red-500">*</span>
             </label>
-            <input
-              type="text"
-              placeholder="e.g. 32-inch LED TV, Double Door Refrigerator"
-              value={suggestedRewardName}
-              onChange={(e) => setSuggestedRewardName(e.target.value)}
-              disabled={isSubmitting}
+            <select
+              id="suggestedReward"
+              value={suggestedInventoryItemId}
+              onChange={handleInventorySelect}
+              disabled={isSubmitting || loadingInventory}
               className="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
               required
-            />
+            >
+              <option value="">
+                {loadingInventory
+                  ? 'Loading reward inventory...'
+                  : inventoryItems.length === 0
+                  ? 'No inventory items available'
+                  : '— Select Reward from Inventory —'}
+              </option>
+              {inventoryItems.map((item) => {
+                const id = item.id || item._id;
+                const isOutOfStock = item.remainingQty <= 0;
+                return (
+                  <option
+                    key={id}
+                    value={id}
+                    disabled={isOutOfStock && id !== suggestedInventoryItemId}
+                  >
+                    {item.name} — {item.remainingQty} available {isOutOfStock ? '(Out of Stock)' : ''}
+                  </option>
+                );
+              })}
+            </select>
             <p className="text-[11px] text-slate-400 mt-1">
-              Painters whose active cycle points fall in this range will see this reward suggested.
+              Selecting an inventory reward sets eligibility only. Inventory stock will <strong>not</strong> be deducted until assigned to a painter.
             </p>
           </div>
 
@@ -182,19 +231,28 @@ export default function RewardTierModal({
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+              className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-5 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-xl transition-colors shadow-xs flex items-center gap-1.5"
+              className="px-5 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-xl transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
             >
-              {isSubmitting && (
-                <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              {isSubmitting ? (
+                <>
+                  <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                  Saving...
+                </>
+              ) : isEditing ? (
+                'Update Tier'
+              ) : (
+                'Create Tier'
               )}
-              {isSubmitting ? 'Saving…' : isEditing ? 'Update Tier' : 'Create Tier'}
             </button>
           </div>
         </form>

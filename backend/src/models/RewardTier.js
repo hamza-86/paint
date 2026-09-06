@@ -12,6 +12,11 @@ const rewardTierSchema = new mongoose.Schema(
       required: [true, 'Maximum points are required'],
       min: [0, 'Maximum points cannot be negative'],
     },
+    suggestedInventoryItemId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'RewardInventoryItem',
+      default: null,
+    },
     suggestedRewardName: {
       type: String,
       required: [true, 'Suggested reward name is required'],

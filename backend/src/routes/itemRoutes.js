@@ -6,8 +6,12 @@ import {
   updateItem,
   deactivateItem,
   activateItem,
+  getItemBrands,
+  getItemCategories,
+  getItemSalesHistory,
 } from '../controllers/itemController.js';
 import { protect, authorize } from '../middleware/auth.js';
+import { upload } from '../middleware/upload.js';
 
 const router = express.Router();
 
@@ -15,13 +19,18 @@ const router = express.Router();
 // Painter role users are rejected with 403 Forbidden.
 router.use(protect, authorize('admin'));
 
+// Metadata endpoints (must be registered before /:id)
+router.get('/meta/brands', getItemBrands);
+router.get('/meta/categories', getItemCategories);
+
 // Collection endpoints
 router.get('/', getItems);
-router.post('/', createItem);
+router.post('/', upload.single('image'), createItem);
 
 // Single item endpoints
 router.get('/:id', getItemById);
-router.patch('/:id', updateItem);
+router.get('/:id/sales', getItemSalesHistory);
+router.patch('/:id', upload.single('image'), updateItem);
 router.patch('/:id/deactivate', deactivateItem);
 router.patch('/:id/activate', activateItem);
 

@@ -13,7 +13,14 @@ import { useCycles, useActivateCycle, useCloseCycle } from '@/lib/hooks/useCycle
 const formatDate = (d) => {
   if (!d) return '—';
   try {
-    return new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(d));
+    const date = new Date(d);
+    const hasTime = date.getHours() !== 0 || date.getMinutes() !== 0;
+    return new Intl.DateTimeFormat('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      ...(hasTime ? { hour: '2-digit', minute: '2-digit' } : {}),
+    }).format(date);
   } catch { return '—'; }
 };
 
@@ -33,6 +40,8 @@ export default function AdminCyclesPage() {
   const totalCycles = pagination.total;
   const closedCycles = totalCycles - (activeCycle ? 1 : 0);
 
+  const isActiveCycleEnded = activeCycle && new Date(activeCycle.endDate) <= new Date();
+
   const triggerToast = (msg) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(''), 4000);
@@ -43,10 +52,10 @@ export default function AdminCyclesPage() {
     const { cycle, actionType } = confirmModal;
     try {
       if (actionType === 'close') {
-        await closeMutation.mutateAsync(cycle.id);
+        await closeMutation.mutateAsync(cycle.id || cycle._id);
         triggerToast(`Cycle closed. Historical data preserved.`);
       } else {
-        await activateMutation.mutateAsync(cycle.id);
+        await activateMutation.mutateAsync(cycle.id || cycle._id);
         triggerToast(`Cycle activated successfully.`);
       }
       setConfirmModal({ isOpen: false, cycle: null, actionType: 'close' });
@@ -89,7 +98,7 @@ export default function AdminCyclesPage() {
           title="Active Cycle"
           value={isLoading ? null : (activeCycle ? 1 : 0)}
           subtitle={activeCycle ? `${formatDate(activeCycle.startDate)} → ${formatDate(activeCycle.endDate)}` : 'No active cycle'}
-          color="emerald"
+          color={isActiveCycleEnded ? 'amber' : 'emerald'}
           icon={
             <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
@@ -127,31 +136,63 @@ export default function AdminCyclesPage() {
 
       {/* Active Cycle Banner */}
       {!isLoading && activeCycle && (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className={`border rounded-xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${
+          isActiveCycleEnded
+            ? 'bg-amber-50 border-amber-300'
+            : 'bg-emerald-50 border-emerald-200'
+        }`}>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                <path d="M3 3v5h5" /><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" /><path d="M16 16h5v5" />
-              </svg>
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+              isActiveCycleEnded ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
+            }`}>
+              {isActiveCycleEnded ? (
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                  <line x1="12" y1="9" x2="12" y2="13" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                  <path d="M3 3v5h5" /><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" /><path d="M16 16h5v5" />
+                </svg>
+              )}
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider">Current Active Cycle</span>
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-bold">
-                  <span className="w-1 h-1 rounded-full bg-white animate-pulse" />
-                  LIVE
+                <span className={`text-xs font-bold uppercase tracking-wider ${
+                  isActiveCycleEnded ? 'text-amber-800' : 'text-emerald-800'
+                }`}>
+                  {isActiveCycleEnded ? 'Active Cycle Has Ended' : 'Current Active Cycle'}
+                </span>
+                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                  isActiveCycleEnded
+                    ? 'bg-amber-600 text-white'
+                    : 'bg-emerald-500 text-white'
+                }`}>
+                  {isActiveCycleEnded ? 'ACTION REQUIRED' : 'LIVE'}
                 </span>
               </div>
-              <p className="text-sm font-bold text-emerald-900 mt-0.5">
+              <p className={`text-sm font-bold mt-0.5 ${
+                isActiveCycleEnded ? 'text-amber-950' : 'text-emerald-900'
+              }`}>
                 {formatDate(activeCycle.startDate)} — {formatDate(activeCycle.endDate)}
               </p>
+              {isActiveCycleEnded && (
+                <p className="text-xs text-amber-700 mt-1">
+                  This cycle has reached its end date. New sales cannot be recorded until you close this cycle and activate a new one.
+                </p>
+              )}
             </div>
           </div>
           <button
             type="button"
             onClick={() => setConfirmModal({ isOpen: true, cycle: activeCycle, actionType: 'close' })}
-            className="shrink-0 px-4 py-2 text-xs font-semibold text-amber-700 bg-white hover:bg-amber-50 rounded-lg border border-amber-300 transition-colors"
+            className={`shrink-0 px-4 py-2 text-xs font-semibold rounded-lg border transition-colors cursor-pointer ${
+              isActiveCycleEnded
+                ? 'bg-amber-600 text-white border-amber-700 hover:bg-amber-700 shadow-xs'
+                : 'text-amber-700 bg-white hover:bg-amber-50 border-amber-300'
+            }`}
           >
             Close This Cycle
           </button>

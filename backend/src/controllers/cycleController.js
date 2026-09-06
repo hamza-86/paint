@@ -25,6 +25,33 @@ const dateRangesOverlap = (startA, endA, startB, endB) => {
 };
 
 /**
+ * Helper to add computed_status to cycle representation
+ */
+export const enrichCycle = (cycleDoc) => {
+  if (!cycleDoc) return null;
+  const json = typeof cycleDoc.toJSON === 'function' ? cycleDoc.toJSON() : cycleDoc;
+  const now = new Date();
+  const end = new Date(json.endDate);
+  const start = new Date(json.startDate);
+
+  let computed_status = 'ended';
+  if (json.isActive && end > now) {
+    computed_status = 'active';
+  } else if (start > now) {
+    computed_status = 'upcoming';
+  } else if (end <= now) {
+    computed_status = 'ended';
+  } else {
+    computed_status = 'inactive';
+  }
+
+  return {
+    ...json,
+    computed_status,
+  };
+};
+
+/**
  * GET /api/cycles
  * List all cycles with pagination. Returns the active cycle separately.
  * Admin only.
@@ -34,6 +61,13 @@ export const getCycles = async (req, res, next) => {
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 10));
     const skip = (page - 1) * limit;
+    const now = new Date();
+
+    // Auto-finalize any active cycles that have passed their endDate
+    await Cycle.updateMany(
+      { isActive: true, endDate: { $lte: now } },
+      { $set: { isActive: false } }
+    );
 
     const [cycles, total, activeCycle] = await Promise.all([
       Cycle.find()
@@ -41,21 +75,21 @@ export const getCycles = async (req, res, next) => {
         .skip(skip)
         .limit(limit),
       Cycle.countDocuments(),
-      Cycle.findOne({ isActive: true }),
+      Cycle.findOne({ isActive: true, endDate: { $gt: now } }),
     ]);
 
     const totalPages = Math.ceil(total / limit) || 1;
 
     res.status(200).json({
       success: true,
-      data: cycles.map((c) => c.toJSON()),
+      data: cycles.map(enrichCycle),
       pagination: {
         page,
         limit,
         total,
         totalPages,
       },
-      activeCycle: activeCycle ? activeCycle.toJSON() : null,
+      activeCycle: activeCycle ? enrichCycle(activeCycle) : null,
     });
   } catch (err) {
     next(err);
@@ -89,7 +123,7 @@ export const getCycleById = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      data: cycle.toJSON(),
+      data: enrichCycle(cycle),
     });
   } catch (err) {
     next(err);
@@ -106,10 +140,18 @@ export const getCycleById = async (req, res, next) => {
  * - startDate must be strictly before endDate.
  * - Date ranges must not overlap any existing cycle.
  * - If isActive = true, no other active cycle may exist.
+ * - Expired active cycles are automatically finalized and do not block new cycle creation.
  */
 export const createCycle = async (req, res, next) => {
   try {
     const { startDate: rawStart, endDate: rawEnd, isActive = false } = req.body;
+    const now = new Date();
+
+    // Auto-finalize any active cycles that have passed their endDate
+    await Cycle.updateMany(
+      { isActive: true, endDate: { $lte: now } },
+      { $set: { isActive: false } }
+    );
 
     // ── Date presence validation ──────────────────────────────────────────────
     if (!rawStart) {
@@ -144,15 +186,26 @@ export const createCycle = async (req, res, next) => {
     );
 
     if (overlapping) {
+      const formatBound = (d) => {
+        const iso = d.toISOString();
+        return iso.includes('T00:00:00') ? iso.slice(0, 10) : iso.replace('T', ' ').slice(0, 16);
+      };
       return res.status(409).json({
         success: false,
-        message: `The requested date range overlaps with an existing cycle (${overlapping.startDate.toISOString().slice(0, 10)} → ${overlapping.endDate.toISOString().slice(0, 10)}). Cycles must not have overlapping date ranges.`,
+        message: `The requested date range overlaps with an existing cycle (${formatBound(overlapping.startDate)} → ${formatBound(overlapping.endDate)}). Cycles must not have overlapping date ranges.`,
       });
     }
 
     // ── Active conflict check ─────────────────────────────────────────────────
     if (isActive) {
-      const activeCycle = await Cycle.findOne({ isActive: true });
+      if (endDate <= now) {
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot activate a cycle whose end date has already passed.',
+        });
+      }
+
+      const activeCycle = await Cycle.findOne({ isActive: true, endDate: { $gt: now } });
       if (activeCycle) {
         return res.status(409).json({
           success: false,
@@ -176,7 +229,7 @@ export const createCycle = async (req, res, next) => {
     res.status(201).json({
       success: true,
       message: 'Cycle created successfully.',
-      data: cycle.toJSON(),
+      data: enrichCycle(cycle),
     });
   } catch (err) {
     next(err);
@@ -190,15 +243,24 @@ export const createCycle = async (req, res, next) => {
  *
  * Rules:
  * - Cycle must exist.
- * - No other cycle may currently be active.
+ * - End date must not be in the past.
+ * - Any expired active cycles are auto-closed.
+ * - No other unexpired cycle may currently be active.
  */
 export const activateCycle = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const now = new Date();
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ success: false, message: 'Invalid cycle ID format.' });
     }
+
+    // Auto-finalize any expired active cycles
+    await Cycle.updateMany(
+      { isActive: true, endDate: { $lte: now } },
+      { $set: { isActive: false } }
+    );
 
     const cycle = await Cycle.findById(id);
 
@@ -206,16 +268,23 @@ export const activateCycle = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Cycle not found.' });
     }
 
-    if (cycle.isActive) {
+    if (cycle.isActive && new Date(cycle.endDate) > now) {
       return res.status(200).json({
         success: true,
         message: 'Cycle is already active.',
-        data: cycle.toJSON(),
+        data: enrichCycle(cycle),
       });
     }
 
-    // Check for another active cycle
-    const activeCycle = await Cycle.findOne({ isActive: true });
+    if (new Date(cycle.endDate) <= now) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot activate a cycle whose end date has already passed.',
+      });
+    }
+
+    // Check for another unexpired active cycle
+    const activeCycle = await Cycle.findOne({ _id: { $ne: cycle._id }, isActive: true, endDate: { $gt: now } });
     if (activeCycle) {
       return res.status(409).json({
         success: false,
@@ -232,7 +301,7 @@ export const activateCycle = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: 'Cycle activated successfully.',
-      data: cycle.toJSON(),
+      data: enrichCycle(cycle),
     });
   } catch (err) {
     next(err);
@@ -244,12 +313,15 @@ export const activateCycle = async (req, res, next) => {
  * Close (deactivate) a cycle.
  * Admin only.
  *
- * This does NOT delete any historical data.
- * It only sets isActive = false.
+ * Manual Close Behavior:
+ * - Sets isActive = false.
+ * - Sets effective endDate to actual close timestamp (now) if closed before original endDate.
+ * - Preserves original historical cycle record, sales, and point assignments.
  */
 export const closeCycle = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const now = new Date();
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ success: false, message: 'Invalid cycle ID format.' });
@@ -265,21 +337,21 @@ export const closeCycle = async (req, res, next) => {
       return res.status(200).json({
         success: true,
         message: 'Cycle is already closed.',
-        data: cycle.toJSON(),
+        data: enrichCycle(cycle),
       });
     }
 
     cycle.isActive = false;
+    // If closed before original endDate, set effective endDate to now
+    if (new Date(cycle.endDate) > now) {
+      cycle.endDate = new Date(Math.max(now.getTime(), new Date(cycle.startDate).getTime() + 1000));
+    }
     await cycle.save();
-
-    // Note: We do NOT clear Painter.currentCycleId here.
-    // Painters retain their last cycle reference for historical reporting.
-    // When a new cycle is activated, active painters will receive the new cycle ID.
 
     res.status(200).json({
       success: true,
       message: 'Cycle closed successfully. Historical sales and point records are preserved.',
-      data: cycle.toJSON(),
+      data: enrichCycle(cycle),
     });
   } catch (err) {
     next(err);

@@ -8,6 +8,7 @@ import ItemModal from '@/components/admin/items/ItemModal';
 import ItemStatusConfirmModal from '@/components/admin/items/ItemStatusConfirmModal';
 import {
   useItem,
+  useItemSalesHistory,
   useDeactivateItem,
   useActivateItem,
 } from '@/lib/hooks/useItems';
@@ -19,6 +20,14 @@ export default function ItemDetailPage({ params }) {
 
   const { data, isLoading, isError, error } = useItem(id);
   const item = data?.item;
+
+  const [salesPage, setSalesPage] = useState(1);
+  const { data: salesData, isLoading: isSalesLoading } = useItemSalesHistory(id, {
+    page: salesPage,
+    limit: 10,
+  });
+  const sales = salesData?.sales || [];
+  const salesPagination = salesData?.pagination;
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [confirmModal, setConfirmModal] = useState({
@@ -273,33 +282,136 @@ export default function ItemDetailPage({ params }) {
         </div>
       </div>
 
-      {/* Informational Sales History Section (As required by prompt) */}
+      {/* Real Sales History Section */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 sm:p-8 space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-base font-bold text-slate-900">Sales History</h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              All transactions and customer invoices including this item.
+              All transactions and invoices that include this catalog item.
             </p>
           </div>
-          <span className="px-2.5 py-1 text-[11px] font-semibold text-slate-500 bg-slate-100 rounded-full border border-slate-200">
-            Coming in Sales Module
+          <span className="px-2.5 py-1 text-xs font-semibold text-blue-700 bg-blue-50 rounded-full border border-blue-200">
+            {salesPagination?.total ?? 0} {salesPagination?.total === 1 ? 'sale' : 'sales'} recorded
           </span>
         </div>
 
-        <div className="border border-dashed border-slate-200 rounded-xl p-8 text-center bg-slate-50/50">
-          <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-400 mx-auto flex items-center justify-center mb-2.5">
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-            </svg>
+        {isSalesLoading ? (
+          <div className="space-y-3 py-6">
+            <div className="h-10 bg-slate-100 rounded-lg animate-pulse" />
+            <div className="h-10 bg-slate-100 rounded-lg animate-pulse" />
+            <div className="h-10 bg-slate-100 rounded-lg animate-pulse" />
           </div>
-          <p className="text-xs text-slate-600 font-medium">
-            Sales history will appear here after the Sales module is implemented.
-          </p>
-          <p className="text-[11px] text-slate-400 mt-1">
-            Historical sales safely retain snapshot points earned at the time of purchase, regardless of future price or point revisions.
-          </p>
-        </div>
+        ) : sales.length === 0 ? (
+          <div className="border border-dashed border-slate-200 rounded-xl p-8 text-center bg-slate-50/50">
+            <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-400 mx-auto flex items-center justify-center mb-2.5">
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+            </div>
+            <p className="text-xs text-slate-600 font-medium">
+              No sales recorded for this item yet.
+            </p>
+            <p className="text-[11px] text-slate-400 mt-1">
+              When sales include this item, immutable price & reward point snapshots will appear here.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="overflow-x-auto rounded-xl border border-slate-200">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider border-b border-slate-200">
+                  <tr>
+                    <th className="px-4 py-3">Date</th>
+                    <th className="px-4 py-3">Painter</th>
+                    <th className="px-4 py-3">Customer</th>
+                    <th className="px-4 py-3 text-right">Qty</th>
+                    <th className="px-4 py-3 text-right">Price / Unit</th>
+                    <th className="px-4 py-3 text-right">Points Earned</th>
+                    <th className="px-4 py-3 text-right">Line Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {sales.map((s) => (
+                    <tr key={s._id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="px-4 py-3 font-medium text-slate-900 whitespace-nowrap">
+                        {formatDate(s.date || s.createdAt)}
+                      </td>
+                      <td className="px-4 py-3 text-slate-700 whitespace-nowrap">
+                        {s.painter ? (
+                          <div>
+                            <span className="font-semibold text-slate-900">{s.painter.firstName}</span>
+                            {s.painter.mobile && (
+                              <span className="block text-[11px] text-slate-400 font-mono">{s.painter.mobile}</span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-slate-700 whitespace-nowrap">
+                        {s.customer ? (
+                          <div>
+                            <span className="font-medium text-slate-800">{s.customer.name}</span>
+                            {s.customer.mobile && (
+                              <span className="block text-[11px] text-slate-400 font-mono">{s.customer.mobile}</span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono font-semibold text-slate-800 whitespace-nowrap">
+                        {s.quantity}
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono text-slate-600 whitespace-nowrap">
+                        {formatCurrency(s.pricePerUnit)}
+                      </td>
+                      <td className="px-4 py-3 text-right whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1 font-mono font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded">
+                          +{s.pointsEarned} pts
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono font-bold text-slate-900 whitespace-nowrap">
+                        {formatCurrency(s.lineTotal)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination Controls */}
+            {salesPagination && salesPagination.totalPages > 1 && (
+              <div className="flex items-center justify-between text-xs text-slate-500 pt-2">
+                <div>
+                  Page <span className="font-semibold text-slate-800">{salesPagination.page}</span> of{' '}
+                  <span className="font-semibold text-slate-800">{salesPagination.totalPages}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={salesPage <= 1}
+                    onClick={() => setSalesPage((p) => Math.max(1, p - 1))}
+                    className="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-medium transition-colors cursor-pointer"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    type="button"
+                    disabled={salesPage >= salesPagination.totalPages}
+                    onClick={() => setSalesPage((p) => p + 1)}
+                    className="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-medium transition-colors cursor-pointer"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Edit Modal */}

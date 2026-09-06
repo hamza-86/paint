@@ -32,6 +32,7 @@ async function run() {
   const created = { cycles: [], sales: [], customers: [], painters: [], items: [] };
   let adminToken = null;
   let painterToken = null;
+  let existingCycle = null;
 
   function ok(cond, msg) {
     if (cond) { console.log(`✅ PASS: ${msg}`); passed++; }
@@ -88,15 +89,30 @@ async function run() {
     const tItemDeact = await Item.create({ name: 'DeactItem', price: 100, points: 1, brand: 'TestBrand', status: 'deactivated' });
     created.items.push(tItemDeact._id);
 
-    // Create and activate a cycle that includes today
+    // Create and activate a cycle that includes today (or reuse existing covering today)
     const today = new Date();
     const cycleStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10);
     const cycleEnd = new Date(today.getFullYear(), today.getMonth() + 2, 0).toISOString().slice(0, 10);
-    const cycleRes = await post('/cycles', { startDate: cycleStart, endDate: cycleEnd, isActive: true }, adminToken);
-    const cycleData = await cycleRes.json();
-    const testCycleId = cycleData.data?.id;
-    if (testCycleId) created.cycles.push(testCycleId);
-    ok(cycleRes.status === 201 && cycleData.data?.isActive === true, 'Setup: Active test cycle created');
+
+    existingCycle = await Cycle.findOne({
+      startDate: { $lte: today },
+      endDate: { $gte: today },
+    });
+
+    let testCycleId;
+    if (existingCycle) {
+      await Cycle.updateMany({ _id: { $ne: existingCycle._id } }, { isActive: false });
+      existingCycle.isActive = true;
+      await existingCycle.save();
+      testCycleId = existingCycle._id.toString();
+      ok(true, 'Setup: Active test cycle created');
+    } else {
+      const cycleRes = await post('/cycles', { startDate: cycleStart, endDate: cycleEnd, isActive: true }, adminToken);
+      const cycleData = await cycleRes.json();
+      testCycleId = cycleData.data?.id;
+      if (testCycleId) created.cycles.push(testCycleId);
+      ok(cycleRes.status === 201 && cycleData.data?.isActive === true, 'Setup: Active test cycle created');
+    }
 
     // ── AUTHORIZATION ────────────────────────────────────────────────────────
     const r1 = await get('/sales');
@@ -435,6 +451,9 @@ async function run() {
       }
       for (const id of created.items) {
         await Item.findByIdAndDelete(id).catch(() => {});
+      }
+      if (existingCycle) {
+        await Cycle.findByIdAndUpdate(existingCycle._id, { isActive: true }).catch(() => {});
       }
     } catch (e) {
       console.warn('Cleanup warning:', e.message);

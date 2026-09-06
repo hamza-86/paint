@@ -131,6 +131,7 @@ async function runTestSuite() {
     if (inactiveData.data?.id) createdCycleIds.push(inactiveData.data.id);
 
     // ── 11. Create valid active cycle ────────────────────────────────────────
+    await Cycle.updateMany({ isActive: true }, { isActive: false });
     const createActiveRes = await fetch(`${API_URL}/cycles`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },

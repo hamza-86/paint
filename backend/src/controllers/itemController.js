@@ -1,5 +1,7 @@
 import mongoose from 'mongoose';
 import Item from '../models/Item.js';
+import Sale from '../models/Sale.js';
+import { uploadToCloudinary } from '../middleware/upload.js';
 
 /**
  * Helper to escape special characters for regex safety
@@ -85,6 +87,132 @@ export const getItems = async (req, res, next) => {
 };
 
 /**
+ * GET /api/items/meta/brands
+ * Get all distinct non-empty brand names from the catalog.
+ * Admin only.
+ */
+export const getItemBrands = async (req, res, next) => {
+  try {
+    const brands = await Item.distinct('brand');
+    const cleanBrands = brands
+      .filter((b) => typeof b === 'string' && b.trim().length > 0)
+      .map((b) => b.trim())
+      .sort((a, b) => a.localeCompare(b));
+    const uniqueBrands = [...new Set(cleanBrands)];
+
+    res.status(200).json({
+      success: true,
+      brands: uniqueBrands,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * GET /api/items/meta/categories
+ * Get all distinct non-empty category names from the catalog.
+ * Admin only.
+ */
+export const getItemCategories = async (req, res, next) => {
+  try {
+    const categories = await Item.distinct('category');
+    const cleanCategories = categories
+      .filter((c) => typeof c === 'string' && c.trim().length > 0)
+      .map((c) => c.trim())
+      .sort((a, b) => a.localeCompare(b));
+    const uniqueCategories = [...new Set(cleanCategories)];
+
+    res.status(200).json({
+      success: true,
+      categories: uniqueCategories,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * GET /api/items/:id/sales
+ * Get paginated sales history that includes this item.
+ * Admin only.
+ */
+export const getItemSalesHistory = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid item ID format.',
+      });
+    }
+
+    const item = await Item.findById(id);
+    if (!item) {
+      return res.status(404).json({
+        success: false,
+        message: 'Item not found.',
+      });
+    }
+
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
+    const skip = (page - 1) * limit;
+
+    const itemObjectId = new mongoose.Types.ObjectId(id);
+    const filter = { 'lineItems.itemId': itemObjectId };
+
+    const [sales, total] = await Promise.all([
+      Sale.find(filter)
+        .sort({ date: -1, createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate('painterId', 'firstName mobile email')
+        .populate('customerId', 'name mobile')
+        .lean(),
+      Sale.countDocuments(filter),
+    ]);
+
+    const formattedSales = sales.map((sale) => {
+      const lineItem = (sale.lineItems || []).find(
+        (li) => li.itemId && li.itemId.toString() === id
+      );
+      return {
+        _id: sale._id,
+        saleId: sale._id,
+        date: sale.date,
+        createdAt: sale.createdAt,
+        painter: sale.painterId || null,
+        customer: sale.customerId || null,
+        billImageUrl: sale.billImageUrl || '',
+        quantity: lineItem ? lineItem.quantity : 0,
+        pricePerUnit: lineItem ? lineItem.pricePerUnit : 0,
+        pointsPerUnit: lineItem ? lineItem.pointsPerUnit : 0,
+        pointsEarned: lineItem ? lineItem.pointsEarned : 0,
+        lineTotal: lineItem ? lineItem.lineTotal : 0,
+        saleTotalAmount: sale.totalAmount,
+        saleTotalPoints: sale.totalPoints,
+      };
+    });
+
+    const totalPages = Math.ceil(total / limit) || 1;
+
+    res.status(200).json({
+      success: true,
+      sales: formattedSales,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
  * GET /api/items/:id
  * Retrieve a single item by its ID.
  * Admin only.
@@ -121,11 +249,23 @@ export const getItemById = async (req, res, next) => {
 /**
  * POST /api/items
  * Create a new catalog item.
+ * Supports JSON or multipart/form-data with image file.
  * Admin only.
  */
 export const createItem = async (req, res, next) => {
   try {
-    const { name, price, points, brand, category, imageUrl } = req.body;
+    let { name, price, points, brand, category, imageUrl } = req.body;
+
+    if (typeof price === 'string' && price.trim() !== '') {
+      price = Number(price);
+    }
+    if (typeof points === 'string' && points.trim() !== '') {
+      points = Number(points);
+    }
+
+    if (req.file) {
+      imageUrl = await uploadToCloudinary(req.file.buffer, 'items');
+    }
 
     // Field validations
     if (!name || typeof name !== 'string' || !name.trim()) {
@@ -193,6 +333,7 @@ export const createItem = async (req, res, next) => {
 /**
  * PATCH /api/items/:id
  * Update an existing item's details.
+ * Supports JSON or multipart/form-data with image file.
  * Admin only.
  */
 export const updateItem = async (req, res, next) => {
@@ -215,7 +356,18 @@ export const updateItem = async (req, res, next) => {
       });
     }
 
-    const { name, price, points, brand, category, imageUrl } = req.body;
+    let { name, price, points, brand, category, imageUrl } = req.body;
+
+    if (typeof price === 'string' && price.trim() !== '') {
+      price = Number(price);
+    }
+    if (typeof points === 'string' && points.trim() !== '') {
+      points = Number(points);
+    }
+
+    if (req.file) {
+      imageUrl = await uploadToCloudinary(req.file.buffer, 'items');
+    }
 
     if (name !== undefined) {
       if (typeof name !== 'string' || !name.trim()) {

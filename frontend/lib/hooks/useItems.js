@@ -13,6 +13,9 @@ import {
   updateItemApi,
   deactivateItemApi,
   activateItemApi,
+  getItemBrandsApi,
+  getItemCategoriesApi,
+  getItemSalesHistoryApi,
 } from '@/lib/api';
 
 /**
@@ -47,6 +50,41 @@ export function useItem(id) {
 }
 
 /**
+ * Hook to fetch distinct item brands from DB.
+ */
+export function useItemBrands() {
+  return useQuery({
+    queryKey: ['itemBrands'],
+    queryFn: () => getItemBrandsApi(),
+    staleTime: 60 * 1000,
+  });
+}
+
+/**
+ * Hook to fetch distinct item categories from DB.
+ */
+export function useItemCategories() {
+  return useQuery({
+    queryKey: ['itemCategories'],
+    queryFn: () => getItemCategoriesApi(),
+    staleTime: 60 * 1000,
+  });
+}
+
+/**
+ * Hook to fetch paginated sales history for a specific item.
+ */
+export function useItemSalesHistory(id, { page = 1, limit = 20 } = {}) {
+  return useQuery({
+    queryKey: ['itemSalesHistory', id, { page, limit }],
+    queryFn: () => getItemSalesHistoryApi(id, { page, limit }),
+    enabled: Boolean(id),
+    placeholderData: keepPreviousData,
+    staleTime: 30 * 1000,
+  });
+}
+
+/**
  * Hook to create a new item.
  */
 export function useCreateItem() {
@@ -56,6 +94,8 @@ export function useCreateItem() {
     mutationFn: (newItemData) => createItemApi(newItemData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['items'] });
+      queryClient.invalidateQueries({ queryKey: ['itemBrands'] });
+      queryClient.invalidateQueries({ queryKey: ['itemCategories'] });
     },
   });
 }
@@ -71,6 +111,8 @@ export function useUpdateItem() {
     onSuccess: (result, variables) => {
       queryClient.invalidateQueries({ queryKey: ['items'] });
       queryClient.invalidateQueries({ queryKey: ['item', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['itemBrands'] });
+      queryClient.invalidateQueries({ queryKey: ['itemCategories'] });
     },
   });
 }

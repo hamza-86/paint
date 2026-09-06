@@ -3,10 +3,12 @@ import {
   getPainters,
   getPainterById,
   createPainter,
+  updatePainterPhoto,
   deactivatePainter,
   activatePainter,
 } from '../controllers/painterController.js';
 import { protect, authorize } from '../middleware/auth.js';
+import { upload } from '../middleware/upload.js';
 
 const router = express.Router();
 
@@ -16,10 +18,11 @@ router.use(protect, authorize('admin'));
 
 // Collection endpoints
 router.get('/', getPainters);
-router.post('/', createPainter);
+router.post('/', upload.single('photo'), createPainter);
 
 // Single painter endpoints
 router.get('/:id', getPainterById);
+router.patch('/:id/photo', upload.single('photo'), updatePainterPhoto);
 router.patch('/:id/deactivate', deactivatePainter);
 router.patch('/:id/activate', activatePainter);
 

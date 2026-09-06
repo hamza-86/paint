@@ -4,6 +4,7 @@ import Sale from '../models/Sale.js';
 import Painter from '../models/Painter.js';
 import Item from '../models/Item.js';
 import Cycle from '../models/Cycle.js';
+import { uploadToCloudinary } from '../middleware/upload.js';
 
 /**
  * Round to 2 decimal places to avoid floating-point drift.
@@ -24,26 +25,38 @@ const parseDate = (val) => {
 /**
  * Create a sale.
  *
- * Required body:
- *   painterId, customer { name, mobile }, lineItems [{ itemId, quantity }]
- * Optional:
- *   date, billImageUrl
- *
- * Backend responsibilities:
- *   - Find the active cycle
- *   - Validate painter (exists & active)
- *   - Find-or-create customer by mobile
- *   - Fetch each Item; verify active; snapshot price/points
- *   - Calculate all monetary/point values
- *   - Validate sale date is within cycle range
- *   - Store immutable Sale document
+ * Supports both JSON and multipart/form-data (with optional billFile PDF).
+ * Supports both catalog items (from DB) and manual items with custom points/prices.
  */
 export const createSale = async (req, res, next) => {
   try {
-    const { painterId, customer, lineItems, date: rawDate, billImageUrl } = req.body;
+    let { painterId, customer, lineItems, date: rawDate, billImageUrl } = req.body;
+
+    // Handle stringified JSON from FormData
+    if (typeof customer === 'string') {
+      try {
+        customer = JSON.parse(customer);
+      } catch {
+        return res.status(400).json({ success: false, message: 'Invalid customer JSON string.' });
+      }
+    }
+    if (typeof lineItems === 'string') {
+      try {
+        lineItems = JSON.parse(lineItems);
+      } catch {
+        return res.status(400).json({ success: false, message: 'Invalid lineItems JSON string.' });
+      }
+    }
 
     // ── 1. Find active cycle ─────────────────────────────────────────────────
-    const activeCycle = await Cycle.findOne({ isActive: true });
+    const now = new Date();
+    // Auto-finalize any active cycles that have passed their endDate
+    await Cycle.updateMany(
+      { isActive: true, endDate: { $lte: now } },
+      { $set: { isActive: false } }
+    );
+
+    const activeCycle = await Cycle.findOne({ isActive: true, endDate: { $gt: now } });
     if (!activeCycle) {
       return res.status(409).json({
         success: false,
@@ -82,7 +95,7 @@ export const createSale = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'customer.mobile is required.' });
     }
 
-    // ── 4. Line items validation ─────────────────────────────────────────────
+    // ── 4. Line items validation (catalog + manual) ──────────────────────────
     if (!Array.isArray(lineItems) || lineItems.length === 0) {
       return res.status(400).json({
         success: false,
@@ -90,35 +103,129 @@ export const createSale = async (req, res, next) => {
       });
     }
 
-    // Check for duplicate itemIds in submitted line items (merge by keeping first occurrence warning)
     const seenItemIds = new Set();
-    for (const li of lineItems) {
-      if (!li.itemId) {
-        return res.status(400).json({ success: false, message: 'Each line item must have an itemId.' });
-      }
-      if (!mongoose.Types.ObjectId.isValid(li.itemId)) {
-        return res.status(400).json({
-          success: false,
-          message: `Invalid itemId format: ${li.itemId}`,
-        });
-      }
-      if (seenItemIds.has(String(li.itemId))) {
-        return res.status(400).json({
-          success: false,
-          message: `Duplicate itemId in line items: ${li.itemId}. Each item may only appear once per sale.`,
-        });
-      }
-      seenItemIds.add(String(li.itemId));
+    const computedLineItems = [];
+    let totalPoints = 0;
+    let totalAmount = 0;
 
-      // Quantity: must be a positive integer
-      const qty = li.quantity;
-      if (qty === undefined || qty === null) {
-        return res.status(400).json({ success: false, message: 'Each line item must have a quantity.' });
-      }
-      if (typeof qty !== 'number' || !Number.isInteger(qty) || qty < 1) {
+    for (let i = 0; i < lineItems.length; i++) {
+      const li = lineItems[i];
+      const isManual = Boolean(li.isManual || !li.itemId);
+
+      // Quantity validation: must be a positive integer
+      const qty = Number(li.quantity);
+      if (
+        li.quantity === undefined ||
+        li.quantity === null ||
+        isNaN(qty) ||
+        !Number.isInteger(qty) ||
+        qty < 1
+      ) {
         return res.status(400).json({
           success: false,
-          message: `Quantity must be a positive integer. Received: ${qty}`,
+          message: `Line item #${i + 1} quantity must be a positive integer.`,
+        });
+      }
+
+      if (isManual) {
+        // Manual item validation
+        const itemName = li.itemName ? String(li.itemName).trim() : '';
+        if (!itemName) {
+          return res.status(400).json({
+            success: false,
+            message: `Line item #${i + 1} item name is required for manual items.`,
+          });
+        }
+
+        const pricePerUnit = Number(li.pricePerUnit);
+        if (
+          li.pricePerUnit === undefined ||
+          li.pricePerUnit === null ||
+          isNaN(pricePerUnit) ||
+          pricePerUnit < 0
+        ) {
+          return res.status(400).json({
+            success: false,
+            message: `Line item #${i + 1} ("${itemName}") price per unit must be a non-negative number.`,
+          });
+        }
+
+        const pointsPerUnit = Number(li.pointsPerUnit);
+        if (
+          li.pointsPerUnit === undefined ||
+          li.pointsPerUnit === null ||
+          isNaN(pointsPerUnit) ||
+          pointsPerUnit < 0
+        ) {
+          return res.status(400).json({
+            success: false,
+            message: `Line item #${i + 1} ("${itemName}") points per unit must be a non-negative number.`,
+          });
+        }
+
+        const lineTotal = round2(qty * pricePerUnit);
+        const pointsEarned = round2(qty * pointsPerUnit);
+
+        totalAmount = round2(totalAmount + lineTotal);
+        totalPoints = round2(totalPoints + pointsEarned);
+
+        computedLineItems.push({
+          itemId: null,
+          itemName,
+          isManual: true,
+          quantity: qty,
+          pricePerUnit,
+          pointsPerUnit,
+          pointsEarned,
+          lineTotal,
+        });
+      } else {
+        // Catalog item validation
+        if (!mongoose.Types.ObjectId.isValid(li.itemId)) {
+          return res.status(400).json({
+            success: false,
+            message: `Invalid itemId format: ${li.itemId}`,
+          });
+        }
+        if (seenItemIds.has(String(li.itemId))) {
+          return res.status(400).json({
+            success: false,
+            message: `Duplicate itemId in line items: ${li.itemId}. Each item may only appear once per sale.`,
+          });
+        }
+        seenItemIds.add(String(li.itemId));
+
+        const item = await Item.findById(li.itemId);
+        if (!item) {
+          return res.status(404).json({
+            success: false,
+            message: `Item not found: ${li.itemId}`,
+          });
+        }
+        if (item.status !== 'active') {
+          return res.status(400).json({
+            success: false,
+            message: `Item "${item.name}" is deactivated and cannot be added to a sale.`,
+          });
+        }
+
+        const pricePerUnit = item.price;
+        const pointsPerUnit = item.points;
+        const lineTotal = round2(qty * pricePerUnit);
+        const pointsEarned = round2(qty * pointsPerUnit);
+
+        totalAmount = round2(totalAmount + lineTotal);
+        totalPoints = round2(totalPoints + pointsEarned);
+
+        computedLineItems.push({
+          itemId: item._id,
+          itemName: item.name,
+          isManual: false,
+          quantity: qty,
+          pricePerUnit,
+          pointsPerUnit,
+          pointsEarned,
+          lineTotal,
         });
       }
     }
@@ -137,7 +244,6 @@ export const createSale = async (req, res, next) => {
     // Validate date is within the active cycle range (start inclusive, end inclusive)
     const cycleStart = new Date(activeCycle.startDate);
     const cycleEnd = new Date(activeCycle.endDate);
-    // Normalise to date-only comparison (ignore time)
     const saleDateOnly = new Date(saleDate.getFullYear(), saleDate.getMonth(), saleDate.getDate());
     const cycleStartOnly = new Date(cycleStart.getFullYear(), cycleStart.getMonth(), cycleStart.getDate());
     const cycleEndOnly = new Date(cycleEnd.getFullYear(), cycleEnd.getMonth(), cycleEnd.getDate());
@@ -149,57 +255,26 @@ export const createSale = async (req, res, next) => {
       });
     }
 
-    // ── 6. Optional bill URL validation ─────────────────────────────────────
-    if (billImageUrl) {
+    // ── 6. Bill upload / URL handling ─────────────────────────────────────────
+    let finalBillUrl = billImageUrl ? String(billImageUrl).trim() : '';
+    if (req.file) {
+      const isPdf = req.file.mimetype === 'application/pdf';
+      const resourceType = isPdf ? 'raw' : 'auto';
+      finalBillUrl = await uploadToCloudinary(
+        req.file.buffer,
+        'paint_shop/bills',
+        resourceType,
+        req.file.mimetype
+      );
+    } else if (finalBillUrl) {
       try {
-        new URL(billImageUrl);
+        new URL(finalBillUrl);
       } catch {
         return res.status(400).json({ success: false, message: 'billImageUrl must be a valid URL.' });
       }
     }
 
-    // ── 7. Fetch and validate each Item; build computed line items ────────────
-    const computedLineItems = [];
-    let totalPoints = 0;
-    let totalAmount = 0;
-
-    for (const li of lineItems) {
-      const item = await Item.findById(li.itemId);
-      if (!item) {
-        return res.status(404).json({
-          success: false,
-          message: `Item not found: ${li.itemId}`,
-        });
-      }
-      if (item.status !== 'active') {
-        return res.status(400).json({
-          success: false,
-          message: `Item "${item.name}" is deactivated and cannot be added to a sale.`,
-        });
-      }
-
-      const qty = li.quantity;
-      const pricePerUnit = item.price;
-      const pointsPerUnit = item.points;
-      const lineTotal = round2(qty * pricePerUnit);
-      const pointsEarned = round2(qty * pointsPerUnit);
-
-      totalAmount = round2(totalAmount + lineTotal);
-      totalPoints = round2(totalPoints + pointsEarned);
-
-      computedLineItems.push({
-        itemId: item._id,
-        itemName: item.name,
-        quantity: qty,
-        pricePerUnit,
-        pointsPerUnit,
-        pointsEarned,
-        lineTotal,
-      });
-    }
-
-    // ── 8. Find or create Customer ────────────────────────────────────────────
-    // Validate before any writes — all Item/Painter checks passed above.
+    // ── 7. Find or create Customer ────────────────────────────────────────────
     let customerDoc = await Customer.findOne({ mobile: String(customerMobile).trim() });
     if (!customerDoc) {
       customerDoc = await Customer.create({
@@ -208,13 +283,13 @@ export const createSale = async (req, res, next) => {
       });
     }
 
-    // ── 9. Create Sale ────────────────────────────────────────────────────────
+    // ── 8. Create Sale ────────────────────────────────────────────────────────
     const sale = await Sale.create({
       painterId: painter._id,
       customerId: customerDoc._id,
       cycleId: activeCycle._id,
       date: saleDate,
-      billImageUrl: billImageUrl || '',
+      billImageUrl: finalBillUrl,
       lineItems: computedLineItems,
       totalPoints,
       totalAmount,

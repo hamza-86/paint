@@ -11,6 +11,17 @@ const companySchema = new mongoose.Schema(
     details: {
       type: String,
       default: '',
+      trim: true,
+      maxlength: [500, 'Company details cannot exceed 500 characters'],
+    },
+    status: {
+      type: String,
+      enum: {
+        values: ['active', 'deactivated'],
+        message: '{VALUE} is not a valid status',
+      },
+      default: 'active',
+      index: true,
     },
   },
   {
@@ -18,7 +29,19 @@ const companySchema = new mongoose.Schema(
   }
 );
 
+// Indexes for searching and sorting
+companySchema.index({ name: 1 });
+
+// Transform output to map _id to id
+companySchema.methods.toJSON = function () {
+  const company = this.toObject();
+  company.id = String(company._id);
+  delete company.__v;
+  return company;
+};
+
 const Company =
   mongoose.models.Company || mongoose.model('Company', companySchema);
 
 export default Company;
+

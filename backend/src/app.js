@@ -13,6 +13,12 @@ import saleRoutes from './routes/saleRoutes.js';
 import customerRoutes from './routes/customerRoutes.js';
 import painterHistoryRoutes from './routes/painterHistoryRoutes.js';
 import rewardTierRoutes from './routes/rewardTierRoutes.js';
+import companyRoutes from './routes/companyRoutes.js';
+import companyRewardRoutes from './routes/companyRewardRoutes.js';
+import rewardInventoryRoutes from './routes/rewardInventoryRoutes.js';
+import painterRewardAssignmentRoutes from './routes/painterRewardAssignmentRoutes.js';
+import painterPortalRoutes from './routes/painterPortalRoutes.js';
+import dashboardRoutes from './routes/dashboardRoutes.js';
 
 const app = express();
 
@@ -60,12 +66,13 @@ app.use('/api/sales', saleRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/painter-history', painterHistoryRoutes);
 app.use('/api/reward-tiers', rewardTierRoutes);
+app.use('/api/companies', companyRoutes);
+app.use('/api/company-rewards', companyRewardRoutes);
+app.use('/api/reward-inventory', rewardInventoryRoutes);
+app.use('/api/painter-reward-assignments', painterRewardAssignmentRoutes);
+app.use('/api/painter-portal', painterPortalRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
-// TODO: Mount additional routers here as features are built:
-//   app.use('/api/customers', customerRoutes);
-//   app.use('/api/sales', saleRoutes);
-//   app.use('/api/rewards', rewardRoutes);
-//   app.use('/api/companies', companyRoutes);
 
 // ── 404 Handler ──────────────────────────────────────────────────────────────
 app.use((req, res) => {

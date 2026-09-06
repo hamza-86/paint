@@ -29,8 +29,13 @@ export default function CreateCycleModal({ isOpen, onClose, onSuccess, hasActive
     if (!formData.startDate) errs.startDate = 'Start date is required.';
     if (!formData.endDate) errs.endDate = 'End date is required.';
     if (formData.startDate && formData.endDate) {
-      if (new Date(formData.startDate) >= new Date(formData.endDate)) {
-        errs.endDate = 'End date must be after start date.';
+      const start = new Date(formData.startDate);
+      const end = new Date(formData.endDate);
+      if (start >= end) {
+        errs.endDate = 'End date & time must be strictly after start date & time.';
+      }
+      if (formData.isActive && end <= new Date()) {
+        errs.endDate = 'Cannot activate a cycle whose end date & time is in the past.';
       }
     }
     setErrors(errs);
@@ -44,8 +49,8 @@ export default function CreateCycleModal({ isOpen, onClose, onSuccess, hasActive
 
     try {
       await createMutation.mutateAsync({
-        startDate: formData.startDate,
-        endDate: formData.endDate,
+        startDate: new Date(formData.startDate).toISOString(),
+        endDate: new Date(formData.endDate).toISOString(),
         isActive: formData.isActive,
       });
       if (onSuccess) onSuccess('Cycle created successfully.');
@@ -69,14 +74,14 @@ export default function CreateCycleModal({ isOpen, onClose, onSuccess, hasActive
           <div>
             <h2 className="text-lg font-bold text-slate-900">Create Reward Cycle</h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Define the start and end dates for a new painter reward period.
+              Define the exact start and end date/time for a new painter reward period.
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
             disabled={isSubmitting}
-            className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+            className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
@@ -95,13 +100,13 @@ export default function CreateCycleModal({ isOpen, onClose, onSuccess, hasActive
             </div>
           )}
 
-          {/* Start Date */}
+          {/* Start Date & Time */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-              Start Date <span className="text-red-500">*</span>
+              Start Date & Time <span className="text-red-500">*</span>
             </label>
             <input
-              type="date"
+              type="datetime-local"
               value={formData.startDate}
               onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
               className={`w-full px-3.5 py-2 text-sm bg-white border rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all ${
@@ -111,13 +116,13 @@ export default function CreateCycleModal({ isOpen, onClose, onSuccess, hasActive
             {errors.startDate && <p className="text-xs text-red-600 mt-1">{errors.startDate}</p>}
           </div>
 
-          {/* End Date */}
+          {/* End Date & Time */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-              End Date <span className="text-red-500">*</span>
+              End Date & Time <span className="text-red-500">*</span>
             </label>
             <input
-              type="date"
+              type="datetime-local"
               value={formData.endDate}
               onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
               className={`w-full px-3.5 py-2 text-sm bg-white border rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all ${

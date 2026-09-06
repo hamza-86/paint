@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import Painter from '../models/Painter.js';
+import { uploadToCloudinary } from '../middleware/upload.js';
 
 /**
  * Helper to escape special characters for regex safety
@@ -111,11 +112,13 @@ export const getPainterById = async (req, res, next) => {
 /**
  * POST /api/painters
  * Register a new painter account.
+ * Supports JSON or multipart/form-data (with optional 'photo' file).
  * Admin only.
  */
 export const createPainter = async (req, res, next) => {
   try {
-    const { firstName, mobile, email, password, photoUrl } = req.body;
+    const { firstName, mobile, email, password } = req.body;
+    let { photoUrl } = req.body;
 
     // 1. Validation: First Name
     if (!firstName || !firstName.trim()) {
@@ -186,19 +189,74 @@ export const createPainter = async (req, res, next) => {
       });
     }
 
+    // Handle file upload if provided
+    if (req.file) {
+      photoUrl = await uploadToCloudinary(req.file.buffer, 'painters');
+    }
+
     // 6. Create Painter (password will be automatically hashed by pre-save hook)
     const painter = await Painter.create({
       firstName: firstName.trim(),
       mobile: mobileTrimmed,
       email: normalizedEmail,
       password,
-      photoUrl: photoUrl ? photoUrl.trim() : '',
+      photoUrl: photoUrl && typeof photoUrl === 'string' ? photoUrl.trim() : '',
       status: 'active',
     });
 
     res.status(201).json({
       success: true,
       message: 'Painter created successfully.',
+      painter: painter.toJSON(),
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * PATCH /api/painters/:id/photo
+ * Update painter profile photo.
+ * Supports file upload or photoUrl in body.
+ * Admin only.
+ */
+export const updatePainterPhoto = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid painter ID format.',
+      });
+    }
+
+    const painter = await Painter.findById(id);
+    if (!painter) {
+      return res.status(404).json({
+        success: false,
+        message: 'Painter not found.',
+      });
+    }
+
+    let newPhotoUrl = req.body.photoUrl;
+    if (req.file) {
+      newPhotoUrl = await uploadToCloudinary(req.file.buffer, 'painters');
+    }
+
+    if (!newPhotoUrl) {
+      return res.status(400).json({
+        success: false,
+        message: 'No photo file or photoUrl provided.',
+      });
+    }
+
+    painter.photoUrl = newPhotoUrl;
+    await painter.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Painter photo updated successfully.',
       painter: painter.toJSON(),
     });
   } catch (err) {

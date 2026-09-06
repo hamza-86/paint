@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import RewardTier from '../models/RewardTier.js';
+import RewardInventoryItem from '../models/RewardInventoryItem.js';
 import Painter from '../models/Painter.js';
 import Cycle from '../models/Cycle.js';
 import Sale from '../models/Sale.js';
@@ -55,6 +56,7 @@ export async function getRewardTiers(req, res) {
     const totalPages = Math.ceil(total / limit) || 1;
 
     const tiers = await RewardTier.find(filter)
+      .populate('suggestedInventoryItemId', 'name remainingQty totalQty imageUrl status')
       .sort({ minPoints: 1 })
       .skip(skip)
       .limit(limit);
@@ -93,7 +95,10 @@ export async function getRewardTierById(req, res) {
       });
     }
 
-    const tier = await RewardTier.findById(id);
+    const tier = await RewardTier.findById(id).populate(
+      'suggestedInventoryItemId',
+      'name remainingQty totalQty imageUrl status'
+    );
     if (!tier) {
       return res.status(404).json({
         success: false,
@@ -117,11 +122,12 @@ export async function getRewardTierById(req, res) {
 /**
  * POST /api/reward-tiers
  * Create a new reward tier (Admin only).
- * Validates range boundaries, reward name, and prevents overlap with active tiers.
+ * Validates range boundaries, inventory reward, and prevents overlap with active tiers.
+ * Does NOT decrement inventory.
  */
 export async function createRewardTier(req, res) {
   try {
-    const { minPoints, maxPoints, suggestedRewardName } = req.body;
+    const { minPoints, maxPoints, suggestedRewardName, suggestedInventoryItemId } = req.body;
 
     const validationError = validatePoints(minPoints, maxPoints);
     if (validationError) {
@@ -131,10 +137,43 @@ export async function createRewardTier(req, res) {
       });
     }
 
-    if (!suggestedRewardName || !String(suggestedRewardName).trim()) {
+    let resolvedRewardName = suggestedRewardName ? String(suggestedRewardName).trim() : '';
+    let resolvedInventoryItemId = null;
+
+    if (suggestedInventoryItemId) {
+      if (!mongoose.Types.ObjectId.isValid(suggestedInventoryItemId)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid suggestedInventoryItemId format.',
+        });
+      }
+      const invItem = await RewardInventoryItem.findById(suggestedInventoryItemId);
+      if (!invItem) {
+        return res.status(404).json({
+          success: false,
+          message: 'Selected inventory reward item not found.',
+        });
+      }
+      if (invItem.status === 'deactivated') {
+        return res.status(400).json({
+          success: false,
+          message: `Cannot configure tier with deactivated reward "${invItem.name}".`,
+        });
+      }
+      if (invItem.remainingQty <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: `Cannot configure tier with out-of-stock reward "${invItem.name}". Available: ${invItem.remainingQty}.`,
+        });
+      }
+      resolvedRewardName = invItem.name;
+      resolvedInventoryItemId = invItem._id;
+    }
+
+    if (!resolvedRewardName) {
       return res.status(400).json({
         success: false,
-        message: 'Suggested reward name is required.',
+        message: 'Suggested reward is required.',
       });
     }
 
@@ -142,7 +181,6 @@ export async function createRewardTier(req, res) {
     const max = Number(maxPoints);
 
     // Overlap validation: Range [min, max] overlaps [existing.minPoints, existing.maxPoints]
-    // if existing.maxPoints >= min && existing.minPoints <= max
     const overlapping = await RewardTier.findOne({
       status: 'active',
       maxPoints: { $gte: min },
@@ -159,13 +197,19 @@ export async function createRewardTier(req, res) {
     const tier = await RewardTier.create({
       minPoints: min,
       maxPoints: max,
-      suggestedRewardName: String(suggestedRewardName).trim(),
+      suggestedInventoryItemId: resolvedInventoryItemId,
+      suggestedRewardName: resolvedRewardName,
       status: 'active',
     });
 
+    const populated = await RewardTier.findById(tier._id).populate(
+      'suggestedInventoryItemId',
+      'name remainingQty totalQty imageUrl status'
+    );
+
     return res.status(201).json({
       success: true,
-      data: tier,
+      data: populated,
     });
   } catch (error) {
     console.error('createRewardTier error:', error);
@@ -179,7 +223,7 @@ export async function createRewardTier(req, res) {
 /**
  * PATCH /api/reward-tiers/:id
  * Update an existing reward tier (Admin only).
- * Re-validates points, name, and prevents range overlap with other active tiers.
+ * Re-validates points, name/inventory item, and prevents range overlap with other active tiers.
  */
 export async function updateRewardTier(req, res) {
   try {
@@ -200,7 +244,7 @@ export async function updateRewardTier(req, res) {
       });
     }
 
-    const { minPoints, maxPoints, suggestedRewardName } = req.body;
+    const { minPoints, maxPoints, suggestedRewardName, suggestedInventoryItemId } = req.body;
 
     const newMin = minPoints !== undefined ? minPoints : tier.minPoints;
     const newMax = maxPoints !== undefined ? maxPoints : tier.maxPoints;
@@ -216,11 +260,33 @@ export async function updateRewardTier(req, res) {
     const min = Number(newMin);
     const max = Number(newMax);
 
+    if (suggestedInventoryItemId !== undefined) {
+      if (suggestedInventoryItemId) {
+        if (!mongoose.Types.ObjectId.isValid(suggestedInventoryItemId)) {
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid suggestedInventoryItemId format.',
+          });
+        }
+        const invItem = await RewardInventoryItem.findById(suggestedInventoryItemId);
+        if (!invItem) {
+          return res.status(404).json({
+            success: false,
+            message: 'Selected inventory reward item not found.',
+          });
+        }
+        tier.suggestedInventoryItemId = invItem._id;
+        tier.suggestedRewardName = invItem.name;
+      } else {
+        tier.suggestedInventoryItemId = null;
+      }
+    }
+
     if (suggestedRewardName !== undefined) {
       if (!String(suggestedRewardName).trim()) {
         return res.status(400).json({
           success: false,
-          message: 'Suggested reward name cannot be empty.',
+          message: 'Suggested reward cannot be empty.',
         });
       }
       tier.suggestedRewardName = String(suggestedRewardName).trim();
@@ -247,9 +313,14 @@ export async function updateRewardTier(req, res) {
     tier.maxPoints = max;
     await tier.save();
 
+    const populated = await RewardTier.findById(tier._id).populate(
+      'suggestedInventoryItemId',
+      'name remainingQty totalQty imageUrl status'
+    );
+
     return res.status(200).json({
       success: true,
-      data: tier,
+      data: populated,
     });
   } catch (error) {
     console.error('updateRewardTier error:', error);

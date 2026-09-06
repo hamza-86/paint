@@ -1,28 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useCreateItem, useUpdateItem } from '@/lib/hooks/useItems';
-
-const COMMON_BRANDS = [
-  'Asian Paints',
-  'Berger',
-  'Nerolac',
-  'Dulux',
-  'Indigo',
-  'Birla White',
-  'MRF Corp',
-];
-
-const COMMON_CATEGORIES = [
-  'Interior Paint',
-  'Exterior Paint',
-  'Primer',
-  'Enamel',
-  'Waterproofing',
-  'Wall Putty',
-  'Thinner',
-  'Brush & Roller',
-];
+import {
+  useCreateItem,
+  useUpdateItem,
+  useItemBrands,
+  useItemCategories,
+} from '@/lib/hooks/useItems';
 
 export default function ItemModal({ isOpen, onClose, item = null, onSuccess }) {
   const isEditMode = Boolean(item);
@@ -36,11 +20,29 @@ export default function ItemModal({ isOpen, onClose, item = null, onSuccess }) {
     imageUrl: '',
   });
 
+  const [imageFile, setImageFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
   const [errors, setErrors] = useState({});
   const [serverError, setServerError] = useState('');
 
   const createMutation = useCreateItem();
   const updateMutation = useUpdateItem();
+
+  // Dynamic brands & categories from DB
+  const { data: brandsData } = useItemBrands();
+  const { data: categoriesData } = useItemCategories();
+
+  const brandSuggestions = brandsData?.brands || [];
+  const categorySuggestions = categoriesData?.categories || [];
+
+  // Cleanup object URL on unmount or file change
+  useEffect(() => {
+    return () => {
+      if (previewUrl && previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
 
   // Populate form on edit or reset on create
   useEffect(() => {
@@ -53,6 +55,7 @@ export default function ItemModal({ isOpen, onClose, item = null, onSuccess }) {
         category: item.category || '',
         imageUrl: item.imageUrl || '',
       });
+      setPreviewUrl(item.imageUrl || null);
     } else {
       setFormData({
         name: '',
@@ -62,7 +65,9 @@ export default function ItemModal({ isOpen, onClose, item = null, onSuccess }) {
         category: '',
         imageUrl: '',
       });
+      setPreviewUrl(null);
     }
+    setImageFile(null);
     setErrors({});
     setServerError('');
   }, [item, isOpen]);
@@ -92,28 +97,63 @@ export default function ItemModal({ isOpen, onClose, item = null, onSuccess }) {
     return Object.keys(errs).length === 0;
   };
 
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        setErrors((prev) => ({ ...prev, image: 'Selected file must be an image.' }));
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        setErrors((prev) => ({ ...prev, image: 'File size must be under 5MB.' }));
+        return;
+      }
+      setImageFile(file);
+      if (previewUrl && previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrl);
+      }
+      setPreviewUrl(URL.createObjectURL(file));
+      setErrors((prev) => ({ ...prev, image: undefined }));
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImageFile(null);
+    if (previewUrl && previewUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    setPreviewUrl(null);
+    setFormData((prev) => ({ ...prev, imageUrl: '' }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setServerError('');
 
     if (!validate()) return;
 
-    const payload = {
-      name: formData.name.trim(),
-      price: parseFloat(formData.price),
-      points: parseFloat(formData.points),
-      brand: formData.brand.trim(),
-      category: formData.category.trim(),
-      imageUrl: formData.imageUrl.trim(),
-    };
-
     try {
+      const payload = new FormData();
+      payload.append('name', formData.name.trim());
+      payload.append('price', String(parseFloat(formData.price)));
+      payload.append('points', String(parseFloat(formData.points)));
+      payload.append('brand', formData.brand.trim());
+      payload.append('category', formData.category.trim());
+
+      if (imageFile) {
+        payload.append('image', imageFile);
+      } else if (formData.imageUrl.trim()) {
+        payload.append('imageUrl', formData.imageUrl.trim());
+      }
+
+      const itemId = item?.id || item?._id;
+
       if (isEditMode) {
-        await updateMutation.mutateAsync({ id: item.id, data: payload });
-        if (onSuccess) onSuccess(`Item "${payload.name}" updated successfully.`);
+        await updateMutation.mutateAsync({ id: itemId, data: payload });
+        if (onSuccess) onSuccess(`Item "${formData.name.trim()}" updated successfully.`);
       } else {
         await createMutation.mutateAsync(payload);
-        if (onSuccess) onSuccess(`Item "${payload.name}" added successfully.`);
+        if (onSuccess) onSuccess(`Item "${formData.name.trim()}" added successfully.`);
       }
       onClose();
     } catch (err) {
@@ -129,9 +169,9 @@ export default function ItemModal({ isOpen, onClose, item = null, onSuccess }) {
       role="dialog"
       aria-modal="true"
     >
-      <div className="relative w-full max-w-xl bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="relative w-full max-w-xl bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[92vh]">
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50 shrink-0">
           <div>
             <h2 className="text-lg font-bold text-slate-900">
               {isEditMode ? 'Edit Item' : 'Add New Item'}
@@ -146,7 +186,7 @@ export default function ItemModal({ isOpen, onClose, item = null, onSuccess }) {
             type="button"
             onClick={onClose}
             disabled={isSubmitting}
-            className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+            className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
           >
             <svg
               className="w-5 h-5"
@@ -164,7 +204,7 @@ export default function ItemModal({ isOpen, onClose, item = null, onSuccess }) {
         </div>
 
         {/* Modal Body */}
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4 flex-1">
+        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4 grow">
           {serverError && (
             <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-start gap-2.5">
               <svg
@@ -258,7 +298,7 @@ export default function ItemModal({ isOpen, onClose, item = null, onSuccess }) {
             </div>
           </div>
 
-          {/* Brand */}
+          {/* Brand with Smart DB suggestions */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
               Brand <span className="text-slate-400 text-xs font-normal">(Optional)</span>
@@ -270,22 +310,29 @@ export default function ItemModal({ isOpen, onClose, item = null, onSuccess }) {
               placeholder="e.g. Asian Paints, Berger, Nerolac..."
               className="w-full px-3.5 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
             />
-            {/* Quick suggestions */}
-            <div className="flex flex-wrap gap-1.5 mt-1.5">
-              {COMMON_BRANDS.map((b) => (
-                <button
-                  type="button"
-                  key={b}
-                  onClick={() => setFormData({ ...formData, brand: b })}
-                  className="px-2 py-0.5 text-[11px] rounded bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium transition-colors"
-                >
-                  {b}
-                </button>
-              ))}
-            </div>
+            {/* Dynamic brand suggestions from catalog */}
+            {brandSuggestions.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                <span className="text-[11px] text-slate-400 self-center mr-1">Existing:</span>
+                {brandSuggestions.map((b) => (
+                  <button
+                    type="button"
+                    key={b}
+                    onClick={() => setFormData({ ...formData, brand: b })}
+                    className={`px-2 py-0.5 text-[11px] rounded font-medium transition-colors cursor-pointer ${
+                      formData.brand === b
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                    }`}
+                  >
+                    {b}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Category */}
+          {/* Category with Smart DB suggestions */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
               Category <span className="text-slate-400 text-xs font-normal">(Optional)</span>
@@ -297,50 +344,82 @@ export default function ItemModal({ isOpen, onClose, item = null, onSuccess }) {
               placeholder="e.g. Interior Paint, Primer, Enamel..."
               className="w-full px-3.5 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
             />
-            {/* Quick suggestions */}
-            <div className="flex flex-wrap gap-1.5 mt-1.5">
-              {COMMON_CATEGORIES.map((cat) => (
-                <button
-                  type="button"
-                  key={cat}
-                  onClick={() => setFormData({ ...formData, category: cat })}
-                  className="px-2 py-0.5 text-[11px] rounded bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium transition-colors"
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
+            {/* Dynamic category suggestions from catalog */}
+            {categorySuggestions.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                <span className="text-[11px] text-slate-400 self-center mr-1">Existing:</span>
+                {categorySuggestions.map((cat) => (
+                  <button
+                    type="button"
+                    key={cat}
+                    onClick={() => setFormData({ ...formData, category: cat })}
+                    className={`px-2 py-0.5 text-[11px] rounded font-medium transition-colors cursor-pointer ${
+                      formData.category === cat
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Image URL with live preview */}
+          {/* Item Image Upload with live preview */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-              Image URL <span className="text-slate-400 text-xs font-normal">(Optional URL)</span>
+              Item Image <span className="text-slate-400 text-xs font-normal">(Optional)</span>
             </label>
-            <div className="flex gap-3 items-start">
-              <input
-                type="url"
-                value={formData.imageUrl}
-                onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                placeholder="https://example.com/item.jpg"
-                className="flex-1 px-3.5 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-              />
-              {formData.imageUrl && (
-                <div className="w-10 h-10 rounded-lg border border-slate-200 overflow-hidden bg-slate-50 shrink-0">
+            <div className="flex items-center gap-4 p-3 rounded-xl border border-dashed border-slate-300 bg-slate-50/50">
+              {previewUrl ? (
+                <div className="relative w-16 h-16 rounded-lg overflow-hidden border border-slate-200 shadow-xs shrink-0 group bg-white">
                   <img
-                    src={formData.imageUrl}
-                    alt="Preview"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                    }}
+                    src={previewUrl}
+                    alt="Item Preview"
+                    className="w-full h-full object-contain"
                   />
+                  <button
+                    type="button"
+                    onClick={handleRemoveImage}
+                    className="absolute inset-0 bg-slate-900/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-semibold cursor-pointer"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <div className="w-16 h-16 rounded-lg bg-slate-200 flex items-center justify-center text-slate-400 shrink-0">
+                  <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+                    <circle cx="9" cy="9" r="2" />
+                    <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+                  </svg>
                 </div>
               )}
+
+              <div className="flex-1 min-w-0">
+                <label className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg cursor-pointer transition-colors shadow-xs">
+                  <svg className="w-4 h-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" y1="3" x2="12" y2="15" />
+                  </svg>
+                  <span>{imageFile || previewUrl ? 'Change Image' : 'Upload Image'}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                </label>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  JPEG, PNG, WebP up to 5MB. Stored securely in Cloudinary.
+                </p>
+                {errors.image && (
+                  <p className="text-xs text-red-600 mt-1">{errors.image}</p>
+                )}
+              </div>
             </div>
-            <p className="text-[11px] text-slate-400 mt-1">
-              Provide an external image link (Cloudinary or public web URL).
-            </p>
           </div>
 
           {/* Modal Footer */}
@@ -349,14 +428,14 @@ export default function ItemModal({ isOpen, onClose, item = null, onSuccess }) {
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+              className="px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-5 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg shadow-sm transition-colors flex items-center gap-2"
+              className="px-5 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
             >
               {isSubmitting && (
                 <svg

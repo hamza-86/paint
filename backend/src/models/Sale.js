@@ -5,7 +5,12 @@ const lineItemSchema = new mongoose.Schema(
     itemId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Item',
-      required: [true, 'Item ID is required'],
+      required: false, // Optional for manual items
+      default: null,
+    },
+    isManual: {
+      type: Boolean,
+      default: false,
     },
     quantity: {
       type: Number,
