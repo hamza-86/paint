@@ -96,16 +96,24 @@ function EmptyState({ filtered, onClearSearch, onAdd }) {
 function RewardItemsBadge({ items }) {
   if (!items || items.length === 0) return null;
   return (
-    <div className="flex flex-wrap gap-1.5 mt-1">
-      {items.map((item, i) => (
-        <span
-          key={i}
-          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50/90 border border-amber-200/80 text-xs text-amber-800 font-medium"
-        >
-          <span className="font-bold text-amber-900">{item.quantity}×</span>
-          <span>{item.name}</span>
+    <div className="space-y-1.5 mt-1">
+      <div className="flex flex-wrap gap-1.5">
+        {items.map((item, i) => (
+          <span
+            key={i}
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50/90 border border-amber-200/80 text-xs text-amber-800 font-medium"
+          >
+            <span className="font-bold text-amber-900">{item.quantity}×</span>
+            <span>{item.name}</span>
+          </span>
+        ))}
+      </div>
+      <div className="flex items-center gap-1">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+          Inventory Synced
         </span>
-      ))}
+      </div>
     </div>
   );
 }

@@ -193,7 +193,7 @@ export async function getPainterEligibility(req, res, next) {
 
     // 2. Find active cycle
     const activeCycle = await Cycle.findOne({ isActive: true });
-    if (!activeCycle)
+    if (!activeCycle) {
       return res.status(200).json({
         status: 'success',
         data: {
@@ -206,6 +206,26 @@ export async function getPainterEligibility(req, res, next) {
           message: 'No active cycle found',
         },
       });
+    }
+
+    // Check if active cycle has expired
+    const now = new Date();
+    if (activeCycle.endDate && now > new Date(activeCycle.endDate)) {
+      activeCycle.isActive = false;
+      await activeCycle.save();
+      return res.status(200).json({
+        status: 'success',
+        data: {
+          painter: { id: painter.id, name: painter.firstName, status: painter.status },
+          activeCycle: null,
+          points: 0,
+          suggestedTier: null,
+          suggestedInventoryItems: [],
+          previousAssignments: [],
+          message: 'No active cycle found. Previous cycle has expired.',
+        },
+      });
+    }
 
     // 3. Compute points in current cycle
     const points = await getPainterCyclePoints(painter._id, activeCycle._id);
@@ -219,6 +239,10 @@ export async function getPainterEligibility(req, res, next) {
       remainingQty: { $gt: 0 },
     })
       .sort({ name: 1 })
+      .populate({
+        path: 'sourceCompanyRewardEntryId',
+        populate: { path: 'companyId', select: 'name' },
+      })
       .select('name imageUrl totalQty remainingQty sourceCompanyRewardEntryId')
       .lean();
 
@@ -228,7 +252,7 @@ export async function getPainterEligibility(req, res, next) {
       cycleId: activeCycle._id,
     })
       .sort({ createdAt: -1 })
-      .select('rewardName qty date notes createdAt')
+      .select('rewardName rewardImageUrl qty date notes createdAt')
       .lean();
 
     return res.status(200).json({
@@ -255,6 +279,9 @@ export async function getPainterEligibility(req, res, next) {
               minPoints: suggestedTier.minPoints,
               maxPoints: suggestedTier.maxPoints,
               suggestedRewardName: suggestedTier.suggestedRewardName,
+              suggestedInventoryItemId: suggestedTier.suggestedInventoryItemId
+                ? String(suggestedTier.suggestedInventoryItemId)
+                : null,
             }
           : null,
         suggestedInventoryItems: inventoryItems,
@@ -298,6 +325,12 @@ export async function createAssignment(req, res, next) {
       if (!cycle) return next(createError('No active cycle found. Provide cycleId explicitly.', 400));
     }
 
+    // Check if cycle is active and unexpired
+    const nowCheck = new Date();
+    if (!cycle.isActive || (cycle.endDate && nowCheck > new Date(cycle.endDate))) {
+      return next(createError('Cannot assign reward: cycle has expired or is inactive', 400));
+    }
+
     // ── Compute eligibility (for snapshot metadata) ─────────────────────────
     const points = await getPainterCyclePoints(painter._id, cycle._id);
     const suggestedTier = await findMatchingTier(points);
@@ -332,7 +365,7 @@ export async function createAssignment(req, res, next) {
       );
     }
 
-    // ── Create assignment record ────────────────────────────────────────────
+    // ── Create assignment record ────────────────────────────────────
     const assignment = await PainterRewardAssignment.create({
       painterId: painter._id,
       rewardInventoryItemId: updatedInventory._id,
@@ -340,6 +373,7 @@ export async function createAssignment(req, res, next) {
       qty: qtyNum,
       painterName: painter.firstName,
       rewardName: updatedInventory.name,
+      rewardImageUrl: updatedInventory.imageUrl || '',
       pointsAtAssignment: points,
       suggestedTierName: suggestedTier ? suggestedTier.suggestedRewardName : '',
       notes: notes ? String(notes).trim().slice(0, 500) : '',

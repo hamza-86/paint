@@ -263,7 +263,10 @@ async function runAllTests() {
   const invQtyBefore = testInvItem.remainingQty;
 
   // Test 5.1: Create Reward Tier with inventory reward product
-  const tierMin = 90000 + Math.floor(Math.random() * 5000);
+  const existingTiersRes = await req('GET', '/reward-tiers?limit=100');
+  const existingTiers = existingTiersRes.data?.data || [];
+  const maxExisting = existingTiers.reduce((max, t) => Math.max(max, t.maxPoints || 0), 0);
+  const tierMin = maxExisting + 100;
   const tierMax = tierMin + 99;
   const tierRes = await req('POST', '/reward-tiers', {
     minPoints: tierMin,

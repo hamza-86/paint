@@ -51,6 +51,10 @@ const painterRewardAssignmentSchema = new mongoose.Schema(
       required: [true, 'Reward name snapshot is required'],
       trim: true,
     },
+    rewardImageUrl: {
+      type: String,
+      default: '',
+    },
     // Points the painter had at the time of assignment (audit trail)
     pointsAtAssignment: {
       type: Number,

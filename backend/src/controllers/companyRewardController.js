@@ -1,6 +1,10 @@
 import mongoose from 'mongoose';
 import CompanyRewardEntry from '../models/CompanyRewardEntry.js';
 import Company from '../models/Company.js';
+import {
+  syncCompanyRewardToInventory,
+  validateCompanyRewardSync,
+} from '../services/rewardInventorySyncService.js';
 
 /**
  * Helper to escape regex special characters
@@ -311,6 +315,9 @@ export const createCompanyReward = async (req, res, next) => {
       rewardItems: normalizedItems,
     });
 
+    // Automatically synchronize structured rewards to Reward Inventory
+    await syncCompanyRewardToInventory(entry);
+
     const populated = await CompanyRewardEntry.findById(entry._id).populate('companyId', 'name status');
 
     return res.status(201).json({
@@ -441,14 +448,39 @@ export const updateCompanyReward = async (req, res, next) => {
       if (itemError) {
         return res.status(400).json({ success: false, message: itemError });
       }
-      entry.rewardItems = rewardItems.map((item) => ({
-        name: String(item.name).trim(),
-        quantity: Number(item.quantity),
-        imageUrl: item.imageUrl || '',
-      }));
+
+      // Validate that updating/reducing reward items does not violate assigned inventory
+      try {
+        await validateCompanyRewardSync(entry._id, rewardItems);
+      } catch (valErr) {
+        return res.status(valErr.statusCode || 400).json({
+          success: false,
+          message: valErr.message,
+        });
+      }
+
+      // Map incoming items, preserving existing subdocument _ids if matching
+      const existingItemsMap = new Map();
+      for (const ex of entry.rewardItems) {
+        existingItemsMap.set(String(ex._id), ex);
+      }
+
+      entry.rewardItems = rewardItems.map((item) => {
+        const key = item._id || item.id;
+        const existingSubdoc = key ? existingItemsMap.get(String(key)) : null;
+        return {
+          ...(existingSubdoc ? { _id: existingSubdoc._id } : (key ? { _id: key } : {})),
+          name: String(item.name).trim(),
+          quantity: Number(item.quantity),
+          imageUrl: item.imageUrl || '',
+        };
+      });
     }
 
     await entry.save();
+
+    // Automatically synchronize updated rewards into Reward Inventory
+    await syncCompanyRewardToInventory(entry);
 
     const populated = await CompanyRewardEntry.findById(entry._id).populate('companyId', 'name status');
 

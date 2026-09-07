@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import RewardInventoryItem from '../models/RewardInventoryItem.js';
 import CompanyRewardEntry from '../models/CompanyRewardEntry.js';
+import PainterRewardAssignment from '../models/PainterRewardAssignment.js';
 
 /**
  * Escape regex special characters for safe search
@@ -308,10 +309,28 @@ export const createRewardInventory = async (req, res, next) => {
     }
 
     // 6. Over-allocation check against source reward item quantity
-    const existingAllocations = await RewardInventoryItem.find({
+    let existingAllocations = await RewardInventoryItem.find({
       sourceCompanyRewardEntryId,
       sourceCompanyRewardItemId,
     });
+
+    // If an untouched, unassigned auto-synced item exists with the source item's exact default name and full quantity,
+    // and manual allocation is now being performed via POST /api/reward-inventory, replace the auto-synced placeholder.
+    if (
+      existingAllocations.length === 1 &&
+      existingAllocations[0].name === sourceRewardItem.name &&
+      existingAllocations[0].totalQty === sourceRewardItem.quantity &&
+      existingAllocations[0].remainingQty === existingAllocations[0].totalQty
+    ) {
+      const isAssigned = await PainterRewardAssignment.exists({
+        rewardInventoryItemId: existingAllocations[0]._id,
+      });
+      if (!isAssigned) {
+        await RewardInventoryItem.deleteOne({ _id: existingAllocations[0]._id });
+        existingAllocations = [];
+      }
+    }
+
     const alreadyAllocated = existingAllocations.reduce((sum, item) => sum + item.totalQty, 0);
     const availableSourceQty = sourceRewardItem.quantity - alreadyAllocated;
 

@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Harun Aziz Paints &amp; Tools — Malkapur</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --terracotta:#E4572E;
+    --plum:#8E3B8F;
+    --gold:#F4B400;
+    --nerolac-red:#D7263D;
+    --blue:#1E88E5;
+    --green:#2E8B57;
+    --ink:#211A17;
+    --plaster:#F4EDE2;
+    --plaster-dim:#EAE1D2;
+    --cream:#FBF6EC;
+    --white:#FFFFFF;
+    --shadow: 0 10px 30px rgba(34,29,26,0.18);
+    --radius: 14px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--plaster);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+    position:relative;
+  }
+  h1,h2,h3,.display{
+    font-family:'Baloo 2', sans-serif;
+    font-weight:700;
+    margin:0;
+    color:var(--ink);
+    line-height:1.05;
+  }
+  .hand{font-family:'Kalam',cursive;}
+  a{color:inherit;text-decoration:none;}
+  img{max-width:100%;display:block;}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 28px;position:relative;z-index:2;}
+  .section{padding:100px 0;position:relative;}
+  @media(max-width:720px){.section{padding:64px 0;}}
+
+  /* ===== flowing paint background layer (fixed, whole page) ===== */
+  .paint-bg{
+    position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;
+  }
+  .blob{
+    position:absolute;border-radius:50%;filter:blur(70px);
+    opacity:0.16;
+  }
+  .blob1{width:520px;height:520px;background:var(--terracotta);top:-120px;left:-140px;animation:drift1 26s ease-in-out infinite;}
+  .blob2{width:420px;height:420px;background:var(--plum);top:30%;right:-160px;animation:drift2 32s ease-in-out infinite;}
+  .blob3{width:460px;height:460px;background:var(--gold);bottom:-140px;left:20%;animation:drift3 24s ease-in-out infinite;}
+  .blob4{width:340px;height:340px;background:var(--nerolac-red);bottom:10%;right:8%;animation:drift1 30s ease-in-out infinite reverse;}
+  @keyframes drift1{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(60px,40px) scale(1.08);}}
+  @keyframes drift2{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(-50px,60px) scale(0.94);}}
+  @keyframes drift3{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(40px,-50px) scale(1.06);}}
+
+  section, footer, .navbar{position:relative;z-index:1;}
+
+  /* ===== rainbow identity strip ===== */
+  .rainbow-strip{
+    position:fixed;top:0;left:0;right:0;height:6px;z-index:110;
+    background:linear-gradient(90deg,
+      var(--nerolac-red), var(--terracotta), var(--gold),
+      var(--green), var(--blue), var(--plum), var(--nerolac-red));
+    background-size:200% 100%;
+    animation:strip-flow 10s linear infinite;
+  }
+  @keyframes strip-flow{0%{background-position:0% 0;}100%{background-position:200% 0;}}
+
+  /* brush-stroke divider */
+  .brush-divider{position:relative;height:64px;margin-top:-64px;z-index:2;pointer-events:none;}
+  .brush-divider svg{width:100%;height:100%;display:block;}
+
+  /* ===== nav ===== */
+  .navbar{
+    position:fixed;top:6px;left:0;right:0;z-index:100;
+    background:rgba(34,29,26,0.82);
+    backdrop-filter:blur(12px);
+    border-bottom:1px solid rgba(251,246,236,0.08);
+  }
+  .navbar .wrap{display:flex;align-items:center;justify-content:space-between;padding-top:12px;padding-bottom:12px;}
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand img{height:40px;width:auto;border-radius:8px;}
+  .brand-name{font-family:'Baloo 2';font-weight:700;font-size:1.05rem;letter-spacing:0.2px;color:var(--cream);}
+  .brand-name span{display:block;font-family:'Inter';font-weight:500;font-size:0.68rem;color:var(--gold);letter-spacing:0.5px;}
+  .swatch-nav{display:flex;align-items:center;gap:22px;}
+  .swatch-nav a{
+    display:flex;align-items:center;gap:7px;
+    font-size:0.86rem;font-weight:600;color:var(--cream);
+    opacity:0.78;transition:opacity .2s ease;
+    position:relative;
+  }
+  .swatch-nav a:hover{opacity:1;}
+  .swatch-dot{width:11px;height:11px;border-radius:3px;display:inline-block;transition:transform .25s ease;}
+  .swatch-nav a:hover .swatch-dot{transform:scale(1.35) rotate(20deg);}
+  .login-btn{
+    background:var(--terracotta);color:var(--cream);
+    padding:10px 22px;border-radius:9px;
+    font-weight:600;font-size:0.86rem;
+    box-shadow:0 8px 20px rgba(184,74,62,0.35);
+    border:none;cursor:pointer;
+    transition:transform .18s ease, background .2s ease, box-shadow .2s ease;
+  }
+  .login-btn:hover{background:var(--gold);color:var(--ink);transform:translateY(-2px);box-shadow:0 10px 22px rgba(232,163,61,0.4);}
+  @media(max-width:860px){
+    .swatch-nav a span.label{display:none;}
+    .swatch-nav{gap:14px;}
+  }
+
+  /* ===== HERO ===== */
+  .hero{
+    position:relative;
+    min-height:100vh;
+    display:flex;align-items:flex-end;
+    background:#1a1310;
+    overflow:hidden;
+  }
+  .hero-bg{
+    position:absolute;inset:0;
+    background-size:cover;background-position:center 40%;
+    filter:saturate(0.9) contrast(1.05);
+    transform:scale(1.05);
+  }
+  .hero-overlay{
+    position:absolute;inset:0;
+    background:
+      linear-gradient(180deg, rgba(20,14,12,0.62) 0%, rgba(20,14,12,0.45) 35%, rgba(15,11,9,0.94) 100%),
+      linear-gradient(110deg, rgba(91,42,107,0.42), rgba(184,74,62,0.2) 55%, rgba(20,14,12,0.05));
+  }
+  .hero-content{
+    position:relative;z-index:3;
+    width:100%;
+    padding:0 0 100px;
+    color:var(--cream);
+  }
+  .hero-content .wrap{max-width:1180px;}
+  .eyebrow-hand{
+    font-family:'Kalam';font-size:1.1rem;color:var(--gold);
+    margin-bottom:8px;display:inline-block;
+    opacity:0;
+  }
+  .hero-title{
+    font-size:clamp(2.4rem, 6vw, 4.6rem);
+    color:var(--cream);
+    letter-spacing:0.5px;
+    max-width:820px;
+  }
+  .hero-title .stroke-line{position:relative;display:block;overflow:hidden;}
+  .hero-title .stroke-line span{display:inline-block;transform:translateY(115%);}
+  .hero-sub{
+    margin-top:22px;max-width:560px;
+    font-size:1.05rem;line-height:1.6;
+    color:#EFE6D8;
+    opacity:0;
+  }
+  .hero-cta-row{margin-top:34px;display:flex;gap:16px;flex-wrap:wrap;opacity:0;}
+  .btn-primary{
+    background:var(--terracotta);color:var(--cream);
+    padding:16px 30px;border-radius:10px;font-weight:600;
+    font-size:0.98rem;box-shadow:0 12px 26px rgba(184,74,62,0.4);
+    transition:transform .2s ease, box-shadow .2s ease;
+    display:inline-block;border:none;cursor:pointer;font-family:inherit;
+  }
+  .btn-primary:hover{transform:translateY(-3px);box-shadow:0 16px 30px rgba(184,74,62,0.5);}
+  .drip-svg{position:absolute;left:0;right:0;top:0;width:100%;height:56px;z-index:4;}
+  .floaty{position:absolute;z-index:2;opacity:0.9;pointer-events:none;}
+
+  /* ===== ABOUT / OWNERS ===== */
+  .about{background:var(--cream);}
+  .about-head{max-width:640px;margin-bottom:46px;}
+  .owner-grid{display:grid;grid-template-columns:1fr 1fr;gap:28px;}
+  @media(max-width:720px){.owner-grid{grid-template-columns:1fr;}}
+  .owner-card{
+    position:relative;border-radius:18px;overflow:hidden;box-shadow:var(--shadow);
+    aspect-ratio:3/4;cursor:pointer;
+  }
+  .owner-card img{width:100%;height:100%;object-fit:cover;transition:transform .5s ease;}
+  .owner-card:hover img{transform:scale(1.06);}
+  .owner-placeholder{
+    width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+    background:linear-gradient(160deg, var(--plum), var(--ink));
+  }
+  .owner-placeholder svg{width:64px;height:64px;opacity:0.85;}
+  .owner-placeholder span{color:var(--cream);font-size:0.82rem;opacity:0.8;text-align:center;padding:0 20px;}
+  .owner-overlay{
+    position:absolute;inset:0;
+    background:linear-gradient(0deg, rgba(20,14,12,0.94) 0%, rgba(20,14,12,0.55) 45%, rgba(20,14,12,0.05) 75%);
+    display:flex;flex-direction:column;justify-content:flex-end;padding:24px;
+    color:var(--cream);
+    transform:translateY(58%);
+    transition:transform .35s cubic-bezier(.2,.8,.2,1);
+  }
+  .owner-card:hover .owner-overlay, .owner-card:focus-within .owner-overlay{transform:translateY(0);}
+  .owner-role{font-size:0.78rem;color:var(--gold);font-weight:700;letter-spacing:0.3px;margin-bottom:4px;}
+  .owner-name{font-family:'Baloo 2';font-size:1.4rem;margin-bottom:6px;}
+  .owner-phone{font-size:0.9rem;color:#E7DECF;display:flex;align-items:center;gap:8px;}
+  .owner-phone svg{width:16px;height:16px;}
+  .owner-badge{
+    position:absolute;top:16px;left:16px;background:rgba(20,14,12,0.7);
+    color:var(--gold);font-size:0.72rem;font-weight:700;padding:6px 12px;border-radius:999px;
+    backdrop-filter:blur(4px);
+  }
+  .kicker{display:inline-flex;align-items:center;gap:8px;color:var(--plum);font-weight:700;font-size:0.85rem;margin-bottom:14px;}
+  .kicker .swatch-dot{width:8px;height:8px;border-radius:2px;}
+  .about-title{font-size:clamp(1.8rem,3.2vw,2.5rem);margin-bottom:14px;}
+  .about-text p{font-size:1.02rem;line-height:1.75;color:#3B332E;margin:0;max-width:640px;}
+  .about-stats{display:flex;gap:34px;margin-top:34px;flex-wrap:wrap;}
+  .stat b{font-family:'Baloo 2';font-size:1.9rem;color:var(--terracotta);display:block;}
+  .stat span{font-size:0.82rem;color:#6b6058;}
+
+  /* ===== STOCK GRID ===== */
+  .stock{background:var(--plaster);}
+  .stock-head{max-width:640px;margin-bottom:50px;}
+  .stock-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:22px;}
+  @media(max-width:980px){.stock-grid{grid-template-columns:repeat(2,1fr);}}
+  @media(max-width:520px){.stock-grid{grid-template-columns:1fr;}}
+  .swatch-card{
+    background:var(--white);border-radius:16px;padding:28px 24px;
+    box-shadow:0 4px 14px rgba(34,29,26,0.06);
+    border-top:6px solid var(--terracotta);
+    transition:transform .22s ease, box-shadow .22s ease;
+  }
+  .swatch-card:hover{transform:translateY(-6px);box-shadow:0 16px 30px rgba(34,29,26,0.14);}
+  .swatch-card:nth-child(1){border-top-color:var(--blue);}
+  .swatch-card:nth-child(2){border-top-color:var(--plum);}
+  .swatch-card:nth-child(3){border-top-color:var(--gold);}
+  .swatch-card:nth-child(4){border-top-color:var(--nerolac-red);}
+  .swatch-icon{width:46px;height:46px;margin-bottom:18px;}
+  .swatch-card h3{font-size:1.15rem;margin-bottom:10px;}
+  .swatch-card p{font-size:0.9rem;line-height:1.55;color:#5c5349;margin:0;}
+
+  /* ===== MIXING / COLOR WHEEL ===== */
+  .mixing{position:relative;background:var(--ink);color:var(--cream);overflow:hidden;}
+  .mixing .wrap{display:grid;grid-template-columns:1fr 340px;gap:60px;align-items:center;}
+  @media(max-width:860px){.mixing .wrap{grid-template-columns:1fr;}}
+  .mixing h2{font-size:clamp(1.8rem,3.4vw,2.6rem);color:var(--cream);margin-bottom:18px;}
+  .mixing p{font-size:1.02rem;line-height:1.7;color:#DCD2C4;max-width:480px;}
+  .wheel-hint{margin-top:18px;font-size:0.85rem;color:#A99C8B;}
+  .wheel-wrap{position:relative;width:300px;height:300px;justify-self:center;}
+  .wheel{
+    width:100%;height:100%;border-radius:50%;
+    background:conic-gradient(from 0deg,
+      hsl(0,80%,55%), hsl(30,80%,55%), hsl(60,80%,55%), hsl(90,80%,50%),
+      hsl(120,75%,45%), hsl(150,75%,45%), hsl(180,75%,48%), hsl(210,75%,52%),
+      hsl(240,75%,58%), hsl(270,70%,55%), hsl(300,70%,52%), hsl(330,75%,55%), hsl(360,80%,55%));
+    box-shadow:0 0 70px rgba(232,163,61,0.2), inset 0 0 0 6px rgba(251,246,236,0.06);
+    cursor:crosshair;
+  }
+  .wheel-core{
+    position:absolute;inset:40px;border-radius:50%;background:var(--ink);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;
+    box-shadow:inset 0 0 30px rgba(0,0,0,0.6);
+    pointer-events:none;
+    transition:background .3s ease;
+  }
+  .wheel-swatch{width:32px;height:32px;border-radius:50%;background:#555;border:3px solid rgba(251,246,236,0.25);transition:background .12s ease;}
+  #wheelLabel{font-family:'Baloo 2';font-size:0.98rem;padding:0 18px;}
+
+  /* ===== ACHIEVEMENT ===== */
+  .achieve{background:var(--white);}
+  .achieve-grid{display:grid;grid-template-columns:0.7fr 1.3fr;gap:56px;align-items:center;}
+  @media(max-width:860px){.achieve-grid{grid-template-columns:1fr;}}
+  .achieve-photo{border-radius:18px;box-shadow:var(--shadow);width:100%;object-fit:cover;aspect-ratio:3/4;}
+  .badge-row{display:flex;gap:10px;align-items:center;margin-bottom:16px;}
+  .badge-pill{background:var(--gold);color:var(--ink);font-weight:700;font-size:0.78rem;padding:6px 14px;border-radius:999px;}
+
+  /* ===== GALLERY ===== */
+  .gallery{background:var(--plaster);}
+  .gallery-scroll{display:flex;gap:18px;overflow-x:auto;padding-bottom:14px;scroll-snap-type:x mandatory;}
+  .gallery-scroll::-webkit-scrollbar{height:8px;}
+  .gallery-scroll::-webkit-scrollbar-thumb{background:var(--terracotta);border-radius:8px;}
+  .gallery-item{flex:0 0 auto;width:260px;height:340px;border-radius:16px;overflow:hidden;scroll-snap-align:start;box-shadow:var(--shadow);position:relative;}
+  .gallery-item img{width:100%;height:100%;object-fit:cover;}
+  .gallery-cap{position:absolute;bottom:0;left:0;right:0;padding:14px 16px;background:linear-gradient(0deg, rgba(0,0,0,0.72), transparent);color:#fff;font-size:0.85rem;font-weight:600;}
+
+  /* ===== REVIEWS ===== */
+  .reviews{background:var(--white);}
+  .review-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;}
+  @media(max-width:860px){.review-grid{grid-template-columns:1fr;}}
+  .review-card{background:var(--cream);border-radius:16px;padding:28px;border-left:4px solid var(--terracotta);}
+  .review-card p{font-size:0.98rem;line-height:1.6;color:#4a423b;margin:0 0 18px;}
+  .review-name{font-family:'Baloo 2';font-weight:700;font-size:0.95rem;}
+  .review-role{font-size:0.78rem;color:#8a7f73;}
+  .stars{color:var(--gold);letter-spacing:2px;margin-bottom:12px;font-size:0.95rem;}
+  .placeholder-note{text-align:center;margin-top:26px;font-size:0.82rem;color:#9a8f83;}
+
+  /* ===== FOOTER ===== */
+  footer{background:var(--ink);color:var(--cream);padding:70px 0 30px;}
+  .footer-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:50px;}
+  @media(max-width:780px){.footer-grid{grid-template-columns:1fr;gap:36px;}}
+  footer h4{font-family:'Baloo 2';font-size:1rem;color:var(--gold);margin-bottom:16px;}
+  .footer-brand{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+  .footer-brand img{height:44px;border-radius:8px;}
+  footer p, footer li{color:#C9BEB0;font-size:0.92rem;line-height:1.7;}
+  footer ul{list-style:none;padding:0;margin:0;}
+  footer li{margin-bottom:10px;}
+  .swatch-legend{display:flex;gap:8px;margin-top:16px;}
+  .swatch-legend div{width:26px;height:26px;border-radius:6px;}
+  .footer-bottom{border-top:1px solid rgba(251,246,236,0.12);margin-top:50px;padding-top:24px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;font-size:0.8rem;color:#8f8577;}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important;}
+  }
+
+  /* ===== CATALOG OVERLAY ===== */
+  .catalog{
+    position:fixed;inset:0;z-index:200;background:var(--plaster);
+    display:none;flex-direction:column;
+  }
+  .catalog.open{display:flex;}
+  .catalog-header{
+    background:var(--ink);color:var(--cream);padding:16px 0;
+    display:flex;align-items:center;justify-content:space-between;flex:0 0 auto;
+  }
+  .catalog-header .wrap{display:flex;align-items:center;justify-content:space-between;width:100%;}
+  .catalog-back{
+    display:flex;align-items:center;gap:8px;color:var(--cream);font-weight:600;font-size:0.9rem;
+    background:none;border:none;cursor:pointer;font-family:inherit;padding:8px 10px;border-radius:8px;
+    transition:background .2s ease;
+  }
+  .catalog-back:hover{background:rgba(251,246,236,0.1);}
+  .catalog-title{font-family:'Baloo 2';font-size:1.1rem;}
+  .catalog-close{
+    background:var(--terracotta);color:var(--cream);border:none;width:34px;height:34px;border-radius:50%;
+    font-size:1.1rem;cursor:pointer;line-height:1;
+  }
+  .catalog-body{flex:1 1 auto;overflow-y:auto;padding:34px 0 60px;}
+
+  .cat-tiles{display:grid;grid-template-columns:repeat(5,1fr);gap:18px;}
+  @media(max-width:900px){.cat-tiles{grid-template-columns:repeat(3,1fr);}}
+  @media(max-width:560px){.cat-tiles{grid-template-columns:repeat(2,1fr);}}
+  .cat-tile{
+    background:var(--white);border-radius:16px;padding:26px 16px;text-align:center;cursor:pointer;
+    box-shadow:0 4px 14px rgba(34,29,26,0.06);border:2px solid transparent;
+    transition:transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+  }
+  .cat-tile:hover{transform:translateY(-4px);box-shadow:0 14px 26px rgba(34,29,26,0.12);border-color:var(--terracotta);}
+  .cat-tile .cat-icon{width:42px;height:42px;margin:0 auto 12px;}
+  .cat-tile span{font-family:'Baloo 2';font-weight:700;font-size:0.95rem;}
+
+  .company-row{display:flex;gap:22px;justify-content:center;margin-bottom:36px;flex-wrap:wrap;}
+  .company-pill{
+    display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;background:none;border:none;font-family:inherit;
+  }
+  .company-circle{
+    width:64px;height:64px;border-radius:50%;background:var(--white);
+    display:flex;align-items:center;justify-content:center;font-family:'Baloo 2';font-weight:700;font-size:1rem;
+    border:3px solid transparent;box-shadow:0 4px 12px rgba(34,29,26,0.1);color:var(--ink);
+    transition:border-color .2s ease, transform .2s ease;
+  }
+  .company-pill.active .company-circle{border-color:var(--terracotta);transform:scale(1.08);}
+  .company-pill span.clabel{font-size:0.82rem;font-weight:600;color:#5c5349;}
+
+  .product-scroll{max-height:560px;overflow-y:auto;padding-right:6px;}
+  .product-scroll::-webkit-scrollbar{width:8px;}
+  .product-scroll::-webkit-scrollbar-thumb{background:var(--terracotta);border-radius:8px;}
+  .product-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+  @media(max-width:860px){.product-grid{grid-template-columns:repeat(2,1fr);}}
+  @media(max-width:520px){.product-grid{grid-template-columns:1fr;}}
+  .product-card{
+    background:var(--white);border-radius:14px;overflow:hidden;box-shadow:0 4px 14px rgba(34,29,26,0.08);
+    transition:transform .2s ease, box-shadow .2s ease;
+  }
+  .product-card:hover{transform:translateY(-4px);box-shadow:0 14px 26px rgba(34,29,26,0.14);}
+  .product-img{height:150px;position:relative;display:flex;align-items:center;justify-content:center;}
+  .product-img svg{width:56px;height:70px;}
+  .product-info{padding:14px 16px 18px;}
+  .product-name{font-family:'Baloo 2';font-size:0.98rem;margin-bottom:6px;}
+  .product-price{color:var(--terracotta);font-weight:700;font-size:0.95rem;}
+  .catalog-empty{text-align:center;color:#9a8f83;padding:40px 0;}
+</style>
+</head>
+<body>
+
+<div class="rainbow-strip"></div>
+
+<div class="paint-bg">
+  <div class="blob blob1"></div>
+  <div class="blob blob2"></div>
+  <div class="blob blob3"></div>
+  <div class="blob blob4"></div>
+</div>
+
+<nav class="navbar">
+  <div class="wrap">
+    <div class="brand">
+      <img src="IMAGE_URL_LOGO" alt="H.A Paints and Tools logo">
+      <div class="brand-name">Harun Aziz Paints &amp; Tools<span>Malkapur, Buldhana</span></div>
+    </div>
+    <div class="swatch-nav">
+      <a href="#about"><i class="swatch-dot" style="background:var(--terracotta)"></i><span class="label">Our Story</span></a>
+      <a href="#stock"><i class="swatch-dot" style="background:var(--blue)"></i><span class="label">Products</span></a>
+      <a href="#gallery"><i class="swatch-dot" style="background:var(--green)"></i><span class="label">Gallery</span></a>
+      <button class="login-btn" onclick="window.location.href='#login'">Login</button>
+    </div>
+  </div>
+</nav>
+
+<section class="hero" id="hero">
+  <div class="hero-bg" style="background-image:url('IMAGE_URL_INTERIOR')"></div>
+  <div class="hero-overlay"></div>
+
+  <div class="floaty" style="top:20%;right:9%;width:64px;" id="float1"></div>
+  <div class="floaty" style="top:42%;right:20%;width:38px;" id="float2"></div>
+  <div class="floaty" style="top:60%;right:12%;width:30px;" id="float3"></div>
+
+  <div class="hero-content">
+    <div class="wrap">
+      <span class="eyebrow-hand" id="eyebrow">Trusted in Malkapur, since generations</span>
+      <h1 class="hero-title" id="heroTitle">
+        <span class="stroke-line"><span>Every wall in Malkapur</span></span>
+        <span class="stroke-line"><span>deserves this shine.</span></span>
+      </h1>
+      <p class="hero-sub" id="heroSub">Asian Paints &amp; Nerolac dealer, custom colour mixing, hardware, wallpapers, and festive Holi &amp; Diwali colours — from a shop the town has trusted for years.</p>
+      <div class="hero-cta-row" id="heroCta">
+        <button class="btn-primary" onclick="openCatalog()">See what we stock</button>
+      </div>
+    </div>
+  </div>
+
+  <svg class="drip-svg" id="dripSvg" viewBox="0 0 1200 60" preserveAspectRatio="none">
+    <path id="dripPath" d="M0,0 L1200,0 L1200,10 Q1100,10 1080,10 Q1060,10 1060,10 L0,10 Z" fill="var(--plaster)"></path>
+  </svg>
+</section>
+
+<div class="brush-divider">
+  <svg viewBox="0 0 1200 64" preserveAspectRatio="none"><path d="M0,20 C150,60 300,0 450,24 C600,48 750,4 900,26 C1020,44 1120,10 1200,20 L1200,64 L0,64 Z" fill="#F4EDE2"></path></svg>
+</div>
+
+<section class="about section" id="about">
+  <div class="wrap">
+    <div class="about-head">
+      <span class="kicker"><i class="swatch-dot" style="background:var(--terracotta)"></i>Our story</span>
+      <h2 class="about-title">Run by two brothers, the old-fashioned way</h2>
+      <div class="about-text">
+        <p>Tucked in Neemwadi Chowk, Malkapur, Harun Aziz Paints &amp; Tools has been the address people turn to for wall paints, hardware, and honest advice on what will actually work for their home. What started as a small counter has grown into a full-stock shop for Asian Paints and Nerolac, run today by brothers Farook and Abdullah Shivani, without losing the personal service that got it here. Beyond paint tins, the shop carries hardware essentials, wallpapers, and — every festive season — Holi colours and Diwali specials that the whole lane waits for.</p>
+      </div>
+      <div class="about-stats">
+        <div class="stat"><b>2+</b><span>generations of trust</span></div>
+        <div class="stat"><b>2</b><span>major paint brands stocked</span></div>
+        <div class="stat"><b>2020</b><span>Nerolac Emerging Star Dealer</span></div>
+      </div>
+    </div>
+
+    <div class="owner-grid">
+      <div class="owner-card" tabindex="0">
+        <div class="owner-badge">Owner</div>
+        <img src="IMAGE_URL_OWNER" alt="Farook Shivani at the shop counter">
+        <div class="owner-overlay">
+          <div class="owner-role">Owner</div>
+          <div class="owner-name">Farook Shivani</div>
+          <div class="owner-phone">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5c0 9 7 16 16 16l3-3-5-5-2 2c-3-1-5-3-6-6l2-2-5-5-3 3Z"/></svg>
+            +91 96044 86305
+          </div>
+        </div>
+      </div>
+      <div class="owner-card" tabindex="0">
+        <div class="owner-badge">Owner</div>
+        <img src="IMAGE_URL_ABDULLAH" alt="Abdullah Shivani at the shop counter">
+        <div class="owner-overlay">
+          <div class="owner-role">Owner</div>
+          <div class="owner-name">Abdullah Shivani</div>
+          <div class="owner-phone">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5c0 9 7 16 16 16l3-3-5-5-2 2c-3-1-5-3-6-6l2-2-5-5-3 3Z"/></svg>
+            +91 90751 0962
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="stock section" id="stock">
+  <div class="wrap">
+    <div class="stock-head">
+      <span class="kicker"><i class="swatch-dot" style="background:var(--plum)"></i>What we stock</span>
+      <h2 class="about-title">One shop, everything the wall needs</h2>
+    </div>
+    <div class="stock-grid">
+      <div class="swatch-card">
+        <svg class="swatch-icon" viewBox="0 0 48 48" fill="none"><rect x="14" y="6" width="20" height="14" rx="2" fill="var(--blue)"/><path d="M16 20h16v20a4 4 0 0 1-4 4h-8a4 4 0 0 1-4-4V20Z" fill="var(--ink)"/><rect x="18" y="2" width="12" height="6" rx="1" fill="var(--gold)"/></svg>
+        <h3>Wall Paints</h3>
+        <p>Full range of Asian Paints &amp; Nerolac — interior, exterior, primers and custom-mixed shades on the spot.</p>
+      </div>
+      <div class="swatch-card">
+        <svg class="swatch-icon" viewBox="0 0 48 48" fill="none"><circle cx="16" cy="32" r="8" stroke="var(--plum)" stroke-width="3"/><circle cx="32" cy="16" r="8" stroke="var(--plum)" stroke-width="3"/><path d="M21 27 27 21" stroke="var(--plum)" stroke-width="3" stroke-linecap="round"/></svg>
+        <h3>Hardware &amp; Tools</h3>
+        <p>Fittings, cycle parts, brushes, rollers and the everyday hardware a home or workshop keeps running back for.</p>
+      </div>
+      <div class="swatch-card">
+        <svg class="swatch-icon" viewBox="0 0 48 48" fill="none"><rect x="6" y="6" width="36" height="36" rx="3" stroke="var(--gold)" stroke-width="3"/><path d="M6 16c8-6 10 6 18 0s10 6 18 0" stroke="var(--gold)" stroke-width="3" fill="none"/></svg>
+        <h3>Wallpapers</h3>
+        <p>Design wallpapers to finish a room paint can't — patterns and textures for feature walls, picked in-store.</p>
+      </div>
+      <div class="swatch-card">
+        <svg class="swatch-icon" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="6" fill="var(--nerolac-red)"/><circle cx="10" cy="14" r="4" fill="var(--gold)"/><circle cx="38" cy="14" r="4" fill="var(--blue)"/><circle cx="10" cy="36" r="4" fill="var(--green)"/><circle cx="38" cy="36" r="4" fill="var(--plum)"/></svg>
+        <h3>Festival Colours</h3>
+        <p>Holi gulal and colours every March, Diwali decor specials every autumn — stocked ahead of the rush.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mixing section" id="mixing">
+  <div class="wrap">
+    <div>
+      <span class="kicker" style="color:var(--gold)"><i class="swatch-dot" style="background:var(--gold)"></i>In-store colour lab</span>
+      <h2>Any shade, mixed while you wait</h2>
+      <p>Our computerised colour-matching machine mixes the exact shade you point to — off a swatch, a photo, or a wall you already love. No guessing, no repeat trips.</p>
+      <p class="wheel-hint">Move your cursor around the wheel to explore shades — click to pick one.</p>
+    </div>
+    <div class="wheel-wrap">
+      <div class="wheel" id="colorWheel"></div>
+      <div class="wheel-core" id="wheelCore">
+        <div class="wheel-swatch" id="wheelSwatch"></div>
+        <span id="wheelLabel">Hover to explore shades</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="brush-divider">
+  <svg viewBox="0 0 1200 64" preserveAspectRatio="none"><path d="M0,30 C150,0 300,58 450,26 C600,0 750,54 900,24 C1020,4 1120,44 1200,30 L1200,64 L0,64 Z" fill="#FFFFFF"></path></svg>
+</div>
+
+<section class="achieve section" id="achieve">
+  <div class="wrap achieve-grid">
+    <img class="achieve-photo" src="IMAGE_URL_SHOPBANNER2" alt="Harun Aziz Paints and Tools shopfront, Malkapur">
+    <div>
+      <div class="badge-row"><span class="badge-pill">Nerolac Emerging Star, 2020</span></div>
+      <h2 class="about-title">Recognised by the brands we sell</h2>
+      <p style="font-size:1.02rem;line-height:1.7;color:#3B332E;max-width:520px;">Harun Aziz Paints &amp; Tools was named to Nerolac's Emerging Stars Dealer Club — a mark of consistent sales and customer trust that the shop has carried forward every year since.</p>
+    </div>
+  </div>
+</section>
+
+<section class="gallery section" id="gallery">
+  <div class="wrap">
+    <span class="kicker"><i class="swatch-dot" style="background:var(--plum)"></i>Around the shop</span>
+    <h2 class="about-title" style="margin-bottom:34px;">A look inside</h2>
+    <div class="gallery-scroll">
+      <div class="gallery-item"><img src="IMAGE_URL_STOREFRONT" alt="Shop storefront with paint buckets"><div class="gallery-cap">Storefront, Neemwadi Chowk</div></div>
+      <div class="gallery-item"><img src="IMAGE_URL_INTERIOR" alt="Shelves stocked with paint tins"><div class="gallery-cap">Full stock, every shade</div></div>
+      <div class="gallery-item"><img src="IMAGE_URL_ARCHWAY" alt="Festive archway at the market entrance"><div class="gallery-cap">Festive season at the market</div></div>
+      <div class="gallery-item"><img src="IMAGE_URL_COUNTER" alt="Shop counter close-up"><div class="gallery-cap">The counter, always stocked</div></div>
+      <div class="gallery-item"><img src="IMAGE_URL_OWNER" alt="Farook Shivani at the counter"><div class="gallery-cap">Farook, at the counter</div></div>
+      <div class="gallery-item"><img src="IMAGE_URL_SIGNAGE" alt="H.A Paints and Tools branded signage board"><div class="gallery-cap">Our shopfront signage</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="reviews section" id="reviews">
+  <div class="wrap">
+    <span class="kicker"><i class="swatch-dot" style="background:var(--terracotta)"></i>What people say</span>
+    <h2 class="about-title" style="margin-bottom:34px;">Customer voices</h2>
+    <div class="review-grid">
+      <div class="review-card">
+        <div class="stars">★★★★★</div>
+        <p>"Got my living room shade matched exactly to a photo I showed them — no back and forth, done the same visit."</p>
+        <div class="review-name">Customer name</div>
+        <div class="review-role">Malkapur</div>
+      </div>
+      <div class="review-card">
+        <div class="stars">★★★★★</div>
+        <p>"I've been buying paint here for every house I've painted in the last few years. Good stock, fair price, honest advice."</p>
+        <div class="review-name">Customer name</div>
+        <div class="review-role">Malkapur</div>
+      </div>
+      <div class="review-card">
+        <div class="stars">★★★★★</div>
+        <p>"Holi colours, Diwali diyas, house paint — this is the one shop that has all of it ready before the season starts."</p>
+        <div class="review-name">Customer name</div>
+        <div class="review-role">Malkapur</div>
+      </div>
+    </div>
+    <p class="placeholder-note">Sample reviews shown above — swap in real customer quotes whenever you're ready.</p>
+  </div>
+</section>
+
+<footer id="contact">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div>
+        <div class="footer-brand">
+          <img src="IMAGE_URL_LOGO" alt="H.A Paints logo">
+          <div class="brand-name" style="color:var(--cream);">Harun Aziz Paints &amp; Tools</div>
+        </div>
+        <p>Wall paints, hardware, wallpapers and festive colours — trusted in Malkapur for generations.</p>
+        <div class="swatch-legend">
+          <div style="background:var(--terracotta)"></div>
+          <div style="background:var(--plum)"></div>
+          <div style="background:var(--gold)"></div>
+          <div style="background:var(--nerolac-red)"></div>
+          <div style="background:var(--blue)"></div>
+          <div style="background:var(--green)"></div>
+        </div>
+      </div>
+      <div>
+        <h4>Visit us</h4>
+        <ul>
+          <li>Neemwadi Chowk</li>
+          <li>Malkapur, Buldhana, Maharashtra</li>
+          <li>Open all days</li>
+        </ul>
+      </div>
+      <div>
+        <h4>Quick links</h4>
+        <ul>
+          <li><a href="#stock">Products</a></li>
+          <li><a href="#gallery">Gallery</a></li>
+          <li><a href="#login">Login</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 Harun Aziz Paints &amp; Tools, Malkapur</span>
+      <span>Authorised Asian Paints &amp; Nerolac dealer</span>
+    </div>
+  </div>
+</footer>
+
+<div class="catalog" id="catalogOverlay">
+  <div class="catalog-header">
+    <div class="wrap">
+      <button class="catalog-back" id="catalogBackBtn" onclick="catalogBack()" style="visibility:hidden;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+        Categories
+      </button>
+      <span class="catalog-title" id="catalogTitle">What we stock</span>
+      <button class="catalog-close" onclick="closeCatalog()">×</button>
+    </div>
+  </div>
+  <div class="catalog-body">
+    <div class="wrap">
+      <div id="catalogCategoryView">
+        <div class="cat-tiles" id="catTiles"></div>
+      </div>
+      <div id="catalogProductView" style="display:none;">
+        <div class="company-row" id="companyRow"></div>
+        <div class="product-scroll"><div class="product-grid" id="productGrid"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  window.addEventListener('DOMContentLoaded', () => {
+    const dripPath = document.getElementById('dripPath');
+    const lines = document.querySelectorAll('.hero-title .stroke-line span');
+    const eyebrow = document.getElementById('eyebrow');
+    const sub = document.getElementById('heroSub');
+    const cta = document.getElementById('heroCta');
+
+    const dripFrames = [
+      "M0,0 L1200,0 L1200,600 Q1100,600 1080,560 Q1000,500 900,600 Q800,700 700,560 Q600,460 500,600 Q400,700 300,560 Q200,460 100,600 Q40,650 0,560 Z",
+      "M0,0 L1200,0 L1200,260 Q1100,300 1080,220 Q1000,140 900,260 Q800,340 700,220 Q600,160 500,260 Q400,340 300,220 Q200,160 100,260 Q40,300 0,220 Z",
+      "M0,0 L1200,0 L1200,40 Q1100,60 1080,30 Q1000,10 900,30 Q800,50 700,30 Q600,20 500,30 Q400,50 300,30 Q200,20 100,30 Q40,40 0,30 Z",
+      "M0,0 L1200,0 L1200,0 Z"
+    ];
+    dripPath.setAttribute('d', dripFrames[0]);
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      dripPath.setAttribute('d', dripFrames[3]);
+      eyebrow.style.opacity = 1;
+      lines.forEach(l => l.style.transform = 'translateY(0)');
+      sub.style.opacity = 1;
+      cta.style.opacity = 1;
+      return;
+    }
+
+    let step = 0;
+    function nextFrame(){
+      step++;
+      if(step < dripFrames.length){
+        dripPath.style.transition = 'd 0.7s cubic-bezier(.6,0,.3,1)';
+        dripPath.setAttribute('d', dripFrames[step]);
+        setTimeout(nextFrame, 480);
+      }
+    }
+    setTimeout(nextFrame, 260);
+
+    setTimeout(()=>{ eyebrow.style.transition='opacity .6s ease'; eyebrow.style.opacity=1; }, 500);
+    lines.forEach((l,i)=>{
+      setTimeout(()=>{
+        l.style.transition = 'transform .8s cubic-bezier(.2,.8,.2,1)';
+        l.style.transform = 'translateY(0)';
+      }, 700 + i*160);
+    });
+    setTimeout(()=>{ sub.style.transition='opacity .7s ease'; sub.style.opacity=1; }, 1250);
+    setTimeout(()=>{ cta.style.transition='opacity .7s ease'; cta.style.opacity=1; }, 1500);
+  });
+
+  function makeDrop(id, color){
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.innerHTML = `<svg viewBox="0 0 40 52" width="100%"><path d="M20 2C20 2 4 24 4 36a16 16 0 0 0 32 0C36 24 20 2 20 2Z" fill="${color}" opacity="0.85"/></svg>`;
+    el.style.animation = `bob 5s ease-in-out infinite`;
+  }
+  makeDrop('float1', 'var(--terracotta)');
+  makeDrop('float2', 'var(--gold)');
+  makeDrop('float3', 'var(--blue)');
+  const bobStyle = document.createElement('style');
+  bobStyle.textContent = `@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-16px)}}`;
+  document.head.appendChild(bobStyle);
+
+  // ===== interactive colour wheel =====
+  (function(){
+    const wheel = document.getElementById('colorWheel');
+    const swatch = document.getElementById('wheelSwatch');
+    const label = document.getElementById('wheelLabel');
+    const core = document.getElementById('wheelCore');
+    let locked = false;
+    let lockTimer = null;
+
+    const names = [
+      {max:15,  name:'Red'},
+      {max:45,  name:'Orange'},
+      {max:65,  name:'Yellow'},
+      {max:100, name:'Lime'},
+      {max:150, name:'Green'},
+      {max:175, name:'Teal'},
+      {max:200, name:'Cyan'},
+      {max:225, name:'Sky Blue'},
+      {max:255, name:'Blue'},
+      {max:280, name:'Indigo'},
+      {max:315, name:'Purple'},
+      {max:345, name:'Pink'},
+      {max:360, name:'Red'}
+    ];
+    function nameFor(hue){
+      for(const n of names){ if(hue <= n.max) return n.name; }
+      return 'Red';
+    }
+    function angleFromEvent(clientX, clientY){
+      const rect = wheel.getBoundingClientRect();
+      const cx = rect.left + rect.width/2, cy = rect.top + rect.height/2;
+      const dx = clientX - cx, dy = clientY - cy;
+      let deg = Math.atan2(dy, dx) * 180/Math.PI;
+      deg = (deg + 90 + 360) % 360; // 0deg = top, matches conic-gradient start
+      return deg;
+    }
+    function updateFromAngle(hue){
+      swatch.style.background = `hsl(${hue},75%,52%)`;
+      if(!locked){ label.textContent = nameFor(hue); }
+    }
+    function handleMove(x,y){
+      const hue = angleFromEvent(x,y);
+      updateFromAngle(hue);
+    }
+    wheel.addEventListener('mousemove', e => handleMove(e.clientX, e.clientY));
+    wheel.addEventListener('touchmove', e => {
+      if(e.touches[0]) handleMove(e.touches[0].clientX, e.touches[0].clientY);
+    }, {passive:true});
+    wheel.addEventListener('mouseleave', () => {
+      if(!locked){ label.textContent = 'Hover to explore shades'; swatch.style.background = '#555'; }
+    });
+    function pick(x,y){
+      const hue = angleFromEvent(x,y);
+      const picked = nameFor(hue);
+      locked = true;
+      label.textContent = `You picked: ${picked}`;
+      swatch.style.background = `hsl(${hue},75%,52%)`;
+      core.style.background = `hsl(${hue},45%,16%)`;
+      clearTimeout(lockTimer);
+      lockTimer = setTimeout(() => {
+        locked = false;
+        core.style.background = 'var(--ink)';
+        label.textContent = 'Hover to explore shades';
+        swatch.style.background = '#555';
+      }, 2200);
+    }
+    wheel.addEventListener('click', e => pick(e.clientX, e.clientY));
+    wheel.addEventListener('touchend', e => {
+      if(e.changedTouches[0]) pick(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+    });
+  })();
+
+  // ===== product catalog =====
+  const CATALOG = {
+    paints: {
+      name: 'Paints',
+      icon: '<svg viewBox="0 0 48 48" fill="none"><rect x="14" y="6" width="20" height="14" rx="2" fill="var(--terracotta)"/><path d="M16 20h16v20a4 4 0 0 1-4 4h-8a4 4 0 0 1-4-4V20Z" fill="var(--ink)"/><rect x="18" y="2" width="12" height="6" rx="1" fill="var(--gold)"/></svg>',
+      companies: {
+        asian: { label:'Asian Paints', items:[
+          {name:'Apcolite Premium Emulsion, 1L', price:'₹320', hue:200},
+          {name:'Royale Luxury Emulsion, 1L', price:'₹680', hue:20},
+          {name:'Tractor Emulsion, 1L', price:'₹210', hue:280},
+          {name:'Ace Exterior Emulsion, 1L', price:'₹340', hue:140},
+          {name:'Apex Ultima Protek, 1L', price:'₹720', hue:40},
+          {name:'Royale Play Metallics, 1L', price:'₹1450', hue:320},
+          {name:'SmartCare Damp Proof, 1L', price:'₹410', hue:0},
+          {name:'Tractor Shyne, 1L', price:'₹240', hue:60},
+          {name:'WoodTech Melamyne, 1L', price:'₹560', hue:100}
+        ]},
+        nerolac: { label:'Nerolac', items:[
+          {name:'Beauty Gold Interior Emulsion, 1L', price:'₹300', hue:210},
+          {name:'Impressions Eco Clean, 1L', price:'₹640', hue:30},
+          {name:'Excel Total Exterior, 1L', price:'₹380', hue:150},
+          {name:'Suraksha Anti-Termite Primer, 1L', price:'₹260', hue:50},
+          {name:'Pearl Interior Emulsion, 1L', price:'₹470', hue:330},
+          {name:'Nerolac Enamel Paint, 1L', price:'₹290', hue:10},
+          {name:'Nerolac Primer, 1L', price:'₹220', hue:190},
+          {name:'Nerolac WoodFin, 1L', price:'₹610', hue:80},
+          {name:'Nerolac Roof Guard, 1L', price:'₹520', hue:260}
+        ]},
+        other: { label:'Other Brands', items:[
+          {name:'Berger Silk Luxury Emulsion, 1L', price:'₹650', hue:220},
+          {name:'Dulux Weathershield, 1L', price:'₹700', hue:35},
+          {name:'JK WallMaxX Putty, 1kg', price:'₹55', hue:0},
+          {name:'Birla White Putty, 1kg', price:'₹58', hue:0},
+          {name:'JSW Paints Emulsion, 1L', price:'₹360', hue:170},
+          {name:'Shalimar Superlac, 1L', price:'₹310', hue:290}
+        ]}
+      }
+    },
+    brushes: {
+      name: 'Brushes & Rollers',
+      icon: '<svg viewBox="0 0 48 48" fill="none"><rect x="14" y="6" width="20" height="14" rx="2" fill="var(--gold)"/><path d="M16 20h16v20a4 4 0 0 1-4 4h-8a4 4 0 0 1-4-4V20Z" fill="var(--ink)"/></svg>',
+      items:[
+        {name:'4-inch Flat Brush', price:'₹90', hue:20},
+        {name:'2-inch Angular Brush', price:'₹60', hue:200},
+        {name:'Foam Roller, 9-inch', price:'₹120', hue:150},
+        {name:'Fabric Roller Set', price:'₹180', hue:280},
+        {name:'Texture Roller', price:'₹150', hue:40},
+        {name:'Ceiling Brush', price:'₹75', hue:100}
+      ]
+    },
+    hardware: {
+      name: 'Hardware & Tools',
+      icon: '<svg viewBox="0 0 48 48" fill="none"><circle cx="16" cy="32" r="8" stroke="var(--plum)" stroke-width="3"/><circle cx="32" cy="16" r="8" stroke="var(--plum)" stroke-width="3"/><path d="M21 27 27 21" stroke="var(--plum)" stroke-width="3" stroke-linecap="round"/></svg>',
+      items:[
+        {name:'Door Hinges (Pair)', price:'₹45', hue:210},
+        {name:'Cycle Chain', price:'₹220', hue:0},
+        {name:'Heavy Duty Padlock', price:'₹180', hue:50},
+        {name:'Measuring Tape, 5m', price:'₹90', hue:120},
+        {name:'Screwdriver Set', price:'₹250', hue:20},
+        {name:'Fevicol Adhesive, 200g', price:'₹65', hue:260}
+      ]
+    },
+    wallpaper: {
+      name: 'Wallpaper',
+      icon: '<svg viewBox="0 0 48 48" fill="none"><rect x="6" y="6" width="36" height="36" rx="3" stroke="var(--gold)" stroke-width="3"/><path d="M6 16c8-6 10 6 18 0s10 6 18 0" stroke="var(--gold)" stroke-width="3" fill="none"/></svg>',
+      items:[
+        {name:'Floral Pattern Wallpaper, roll', price:'₹850', hue:320},
+        {name:'Textured Stone Wallpaper, roll', price:'₹950', hue:30},
+        {name:'3D Brick Wallpaper, roll', price:'₹1050', hue:10},
+        {name:'Geometric Wallpaper, roll', price:'₹780', hue:200}
+      ]
+    },
+    festival: {
+      name: 'Festival Colours',
+      icon: '<svg viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="6" fill="var(--nerolac-red)"/><circle cx="10" cy="14" r="4" fill="var(--gold)"/><circle cx="38" cy="14" r="4" fill="var(--plum)"/><circle cx="10" cy="36" r="4" fill="var(--terracotta)"/><circle cx="38" cy="36" r="4" fill="var(--gold)"/></svg>',
+      items:[
+        {name:'Holi Gulal Pack, assorted', price:'₹40', hue:330},
+        {name:'Holi Water Colour Pouch', price:'₹25', hue:200},
+        {name:'Rangoli Colour Powder Set', price:'₹60', hue:40},
+        {name:'Diwali Diya Set, 12 pc', price:'₹120', hue:20},
+        {name:'Diwali Lighting String', price:'₹150', hue:250}
+      ]
+    }
+  };
+
+  function productCard(item){
+    return `<div class="product-card">
+      <div class="product-img" style="background:linear-gradient(160deg, hsl(${item.hue},70%,60%), hsl(${item.hue},65%,40%));">
+        <svg viewBox="0 0 40 52" fill="none"><path d="M8 6h24v10H8z" fill="rgba(255,255,255,0.85)"/><path d="M10 16h20v28a4 4 0 0 1-4 4H14a4 4 0 0 1-4-4V16Z" fill="rgba(34,29,26,0.55)"/></svg>
+      </div>
+      <div class="product-info">
+        <div class="product-name">${item.name}</div>
+        <div class="product-price">${item.price}</div>
+      </div>
+    </div>`;
+  }
+
+  function renderCategoryTiles(){
+    const wrap = document.getElementById('catTiles');
+    wrap.innerHTML = Object.entries(CATALOG).map(([id,cat]) =>
+      `<div class="cat-tile" onclick="openCategory('${id}')">
+        <div class="cat-icon">${cat.icon}</div>
+        <span>${cat.name}</span>
+      </div>`
+    ).join('');
+  }
+
+  let currentCategory = null;
+  let currentCompany = null;
+
+  function openCategory(id){
+    currentCategory = id;
+    const cat = CATALOG[id];
+    document.getElementById('catalogCategoryView').style.display = 'none';
+    document.getElementById('catalogProductView').style.display = 'block';
+    document.getElementById('catalogBackBtn').style.visibility = 'visible';
+    document.getElementById('catalogTitle').textContent = cat.name;
+
+    const companyRow = document.getElementById('companyRow');
+    if(cat.companies){
+      const keys = Object.keys(cat.companies);
+      currentCompany = keys[0];
+      companyRow.innerHTML = keys.map(k => {
+        const c = cat.companies[k];
+        const initials = c.label.split(' ').map(w=>w[0]).join('').slice(0,2);
+        return `<button class="company-pill ${k===currentCompany?'active':''}" data-key="${k}" onclick="selectCompany('${k}')">
+          <span class="company-circle">${initials}</span>
+          <span class="clabel">${c.label}</span>
+        </button>`;
+      }).join('');
+      renderProducts(cat.companies[currentCompany].items);
+    } else {
+      companyRow.innerHTML = '';
+      renderProducts(cat.items);
+    }
+    document.querySelector('.catalog-body').scrollTop = 0;
+  }
+
+  function selectCompany(key){
+    currentCompany = key;
+    document.querySelectorAll('.company-pill').forEach(el => {
+      el.classList.toggle('active', el.dataset.key === key);
+    });
+    renderProducts(CATALOG[currentCategory].companies[key].items);
+  }
+
+  function renderProducts(items){
+    const grid = document.getElementById('productGrid');
+    grid.innerHTML = items.length
+      ? items.map(productCard).join('')
+      : '<div class="catalog-empty">More items coming soon.</div>';
+  }
+
+  function catalogBack(){
+    currentCategory = null;
+    document.getElementById('catalogCategoryView').style.display = 'block';
+    document.getElementById('catalogProductView').style.display = 'none';
+    document.getElementById('catalogBackBtn').style.visibility = 'hidden';
+    document.getElementById('catalogTitle').textContent = 'What we stock';
+  }
+
+  function openCatalog(){
+    renderCategoryTiles();
+    catalogBack();
+    document.getElementById('catalogOverlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeCatalog(){
+    document.getElementById('catalogOverlay').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+</script>
+
+</body>
+</html>

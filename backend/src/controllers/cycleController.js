@@ -38,11 +38,11 @@ export const enrichCycle = (cycleDoc) => {
   if (json.isActive && end > now) {
     computed_status = 'active';
   } else if (start > now) {
+    // Starts in the future, not yet active
     computed_status = 'upcoming';
-  } else if (end <= now) {
-    computed_status = 'ended';
   } else {
-    computed_status = 'inactive';
+    // Past end date or manually closed
+    computed_status = 'ended';
   }
 
   return {
@@ -344,7 +344,10 @@ export const closeCycle = async (req, res, next) => {
     cycle.isActive = false;
     // If closed before original endDate, set effective endDate to now
     if (new Date(cycle.endDate) > now) {
-      cycle.endDate = new Date(Math.max(now.getTime(), new Date(cycle.startDate).getTime() + 1000));
+      cycle.endDate = now;
+      if (new Date(cycle.startDate) >= now) {
+        cycle.startDate = new Date(now.getTime() - 1000);
+      }
     }
     await cycle.save();
 

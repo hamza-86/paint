@@ -68,6 +68,7 @@ export default function CompanyRewardModal({
         setRewardItems(
           Array.isArray(entry.rewardItems) && entry.rewardItems.length > 0
             ? entry.rewardItems.map((i) => ({
+                id: i._id || i.id,
                 name: i.name || '',
                 quantity: i.quantity || 1,
               }))
@@ -167,6 +168,7 @@ export default function CompanyRewardModal({
         quantitySold: qty,
         saleValue: sale,
         rewardItems: rewardItems.map((item) => ({
+          ...(item.id || item._id ? { _id: item.id || item._id } : {}),
           name: String(item.name).trim(),
           quantity: Number(item.quantity),
         })),
