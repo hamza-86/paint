@@ -7,15 +7,15 @@
  */
 
 export const SHOP_IMAGES = {
-  logo: 'IMAGE_URL_LOGO',
-  interior: 'IMAGE_URL_INTERIOR',
-  owner: 'IMAGE_URL_OWNER',
-  abdullah: 'IMAGE_URL_ABDULLAH',
-  shopBanner2: 'IMAGE_URL_SHOPBANNER2',
-  storefront: 'IMAGE_URL_STOREFRONT',
-  archway: 'IMAGE_URL_ARCHWAY',
-  counter: 'IMAGE_URL_COUNTER',
-  signage: 'IMAGE_URL_SIGNAGE',
+  logo: 'https://res.cloudinary.com/wibcunug/image/upload/v1788795789/hroon_azzi_logo.webp',
+  interior: 'https://res.cloudinary.com/wibcunug/image/upload/v1788798453/unnamed.webp',
+  owner: 'https://res.cloudinary.com/wibcunug/image/upload/v1788795798/unnamed_4.webp',
+  abdullah: 'https://res.cloudinary.com/wibcunug/image/upload/v1788795788/ChatGPT_Image_Sep_6_2026_10_31_18_AM.png',
+  shopBanner2: 'https://res.cloudinary.com/wibcunug/image/upload/v1788792253/ChatGPT_Image_Sep_6_2026_10_49_00_AM.png',
+  storefront: 'https://res.cloudinary.com/wibcunug/image/upload/v1788796677/unnamed_5.webp',
+  archway: 'https://res.cloudinary.com/wibcunug/image/upload/v1788796681/unnamed_3.webp',
+  counter: 'https://res.cloudinary.com/wibcunug/image/upload/v1788792253/ChatGPT_Image_Sep_6_2026_10_49_00_AM.png',
+  signage: 'https://res.cloudinary.com/wibcunug/image/upload/v1788792253/ChatGPT_Image_Sep_6_2026_10_49_00_AM.png',
 };
 
 export const CATALOG_DATA = {

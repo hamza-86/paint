@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 /**
  * Reusable Image with Fallback
  *
- * Prevents broken images when placeholder tokens (e.g. IMAGE_URL_...) are used,
- * while automatically rendering the real image as soon as real URLs are populated.
+ * Reliably displays real images with eager loading, async decoding,
+ * automatic single-retry on hydration race conditions, and an elegant
+ * themed SVG placeholder when a URL is genuinely missing or broken.
  */
 export default function ImageWithFallback({
   src,
@@ -15,11 +16,35 @@ export default function ImageWithFallback({
   style = {},
   placeholderType = 'photo', // 'logo' | 'owner' | 'photo' | 'gallery' | 'achieve'
   label,
+  lazy = false,
   children,
 }) {
-  const [hasError, setHasError] = useState(false);
+  const cleanSrc = typeof src === 'string' ? src.trim() : '';
+  const isPlaceholderToken = !cleanSrc || cleanSrc.startsWith('IMAGE_URL_');
 
-  const isPlaceholderToken = !src || typeof src !== 'string' || src.startsWith('IMAGE_URL_');
+  const [hasError, setHasError] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
+  const imgRef = useRef(null);
+
+  useEffect(() => {
+    setHasError(false);
+    setRetryKey(0);
+  }, [cleanSrc]);
+
+  const handleError = (e) => {
+    // If the browser already resolved dimensions, do not treat as error
+    if (e?.currentTarget?.naturalWidth > 0) {
+      return;
+    }
+    if (retryKey < 1) {
+      // Retry once after a brief interval to overcome hydration or network blips
+      setTimeout(() => {
+        setRetryKey((k) => k + 1);
+      }, 400);
+    } else {
+      setHasError(true);
+    }
+  };
 
   if (isPlaceholderToken || hasError) {
     if (placeholderType === 'logo') {
@@ -97,12 +122,15 @@ export default function ImageWithFallback({
 
   return (
     <img
-      src={src}
+      ref={imgRef}
+      key={`${cleanSrc}-${retryKey}`}
+      src={cleanSrc}
       alt={alt}
       className={className}
       style={style}
-      onError={() => setHasError(true)}
-      loading="lazy"
+      onError={handleError}
+      loading={lazy ? 'lazy' : 'eager'}
+      decoding="async"
     />
   );
 }

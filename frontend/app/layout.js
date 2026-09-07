@@ -8,10 +8,16 @@ const geistSans = Geist({
 });
 
 export const metadata = {
-  title: 'Paint Shop Painter Management Platform',
+  title: 'Harun Aziz Paints & Tools | Malkapur',
   description:
-    'Single-shop painter rewards, sales tracking, and management platform.',
-  keywords: ['paint shop', 'painter management', 'rewards', 'sales tracking'],
+    'Harun Aziz Paints & Tools, Neemwadi Chowk, Malkapur, Buldhana. Asian Paints & Nerolac dealer, custom colour mixing, hardware, and painter rewards platform.',
+  keywords: [
+    'harun aziz paints',
+    'paint shop malkapur',
+    'asian paints malkapur',
+    'nerolac dealer buldhana',
+    'painter rewards',
+  ],
 };
 
 export default function RootLayout({ children }) {
