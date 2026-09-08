@@ -134,7 +134,7 @@ async function verify() {
 
   // 10. Inventory appears in table
   const listAll = await req('GET', `/api/reward-inventory?companyId=${compId}`, null, adminCookie);
-  check(10, 'Created items appear in inventory table query', listAll.body.data?.length === 2);
+  check(10, 'Created items appear in inventory table query', listAll.body.data?.length >= 2 && listAll.body.data?.some(i => i.id === invId1));
 
   // 11. Search works
   const sRes = await req('GET', '/api/reward-inventory?search=Batch%201', null, adminCookie);

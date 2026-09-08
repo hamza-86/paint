@@ -7,6 +7,7 @@ import app from './src/app.js';
 import Cycle from './src/models/Cycle.js';
 import Painter from './src/models/Painter.js';
 import Item from './src/models/Item.js';
+import { getTestMongoUri } from './src/config/testDb.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -20,7 +21,7 @@ async function runTestSuite() {
   console.log('   REWARD CYCLE MANAGEMENT VERIFICATION SUITE   ');
   console.log('==================================================\n');
 
-  const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/paintshop_dev';
+  const uri = getTestMongoUri();
   await mongoose.connect(uri);
 
   const server = http.createServer(app);
@@ -46,6 +47,8 @@ async function runTestSuite() {
   let painterToken = null;
 
   try {
+    await Cycle.deleteMany({});
+
     // ── 1. Health check ─────────────────────────────────────────────────────
     const healthRes = await fetch(`${API_URL}/health`);
     const healthData = await healthRes.json();
@@ -118,7 +121,7 @@ async function runTestSuite() {
     const createInactiveRes = await fetch(`${API_URL}/cycles`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ startDate: '2026-01-01', endDate: '2026-04-30', isActive: false }),
+      body: JSON.stringify({ startDate: '2027-01-01', endDate: '2027-04-30', isActive: false }),
     });
     const inactiveData = await createInactiveRes.json();
     assert(
@@ -135,7 +138,7 @@ async function runTestSuite() {
     const createActiveRes = await fetch(`${API_URL}/cycles`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ startDate: '2026-05-01', endDate: '2026-08-31', isActive: true }),
+      body: JSON.stringify({ startDate: '2026-09-01', endDate: '2026-12-31', isActive: true }),
     });
     const activeData = await createActiveRes.json();
     assert(
@@ -233,12 +236,11 @@ async function runTestSuite() {
     assert(nonExistRes.status === 404, '20. Non-existing cycle returns 404 Not Found');
 
     // ── 22. Overlapping cycle rejected ───────────────────────────────────────
-    // Existing: 2026-01-01 → 2026-04-30 and 2026-05-01 → 2026-08-31
-    // Overlap attempt: 2026-04-01 → 2026-07-31 (overlaps both)
+    // Overlap attempt: 2027-02-01 → 2027-03-31 (overlaps 2027-01-01 to 2027-04-30)
     const overlapRes = await fetch(`${API_URL}/cycles`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ startDate: '2026-04-01', endDate: '2026-07-31' }),
+      body: JSON.stringify({ startDate: '2027-02-01', endDate: '2027-03-31' }),
     });
     assert(overlapRes.status === 409, '21. Overlapping cycle rejected with 409 Conflict');
     const overlapData = await overlapRes.json();
@@ -251,7 +253,7 @@ async function runTestSuite() {
     const secondActiveRes = await fetch(`${API_URL}/cycles`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ startDate: '2027-01-01', endDate: '2027-04-30', isActive: true }),
+      body: JSON.stringify({ startDate: '2027-05-01', endDate: '2027-08-31', isActive: true }),
     });
     assert(secondActiveRes.status === 409, '23. Creating second active cycle rejected with 409 Conflict');
 
@@ -298,7 +300,13 @@ async function runTestSuite() {
         );
 
         // ── 27. Second activation rejected ──────────────────────────────
-        const secondActivateRes = await fetch(`${API_URL}/cycles/${activeCycleId}/activate`, {
+        const futureCycle = await Cycle.create({
+          startDate: new Date('2027-05-01'),
+          endDate: new Date('2027-08-31'),
+          isActive: false,
+        });
+        createdCycleIds.push(futureCycle._id.toString());
+        const secondActivateRes = await fetch(`${API_URL}/cycles/${futureCycle._id}/activate`, {
           method: 'PATCH',
           headers: { Authorization: `Bearer ${adminToken}` },
         });

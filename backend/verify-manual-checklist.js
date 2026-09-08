@@ -7,6 +7,7 @@ import Painter from './src/models/Painter.js';
 import Sale from './src/models/Sale.js';
 import RewardTier from './src/models/RewardTier.js';
 import Cycle from './src/models/Cycle.js';
+import { getTestMongoUri } from './src/config/testDb.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,7 +20,7 @@ async function verifyManualChecklist() {
   console.log('   PART 9 — SECTION 31 MANUAL CHECKLIST VERIFY    ');
   console.log('==================================================\n');
 
-  await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/paintshop_dev');
+  await mongoose.connect(getTestMongoUri());
 
   let passed = 0;
   let failed = 0;

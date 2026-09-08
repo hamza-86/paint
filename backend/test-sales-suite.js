@@ -9,6 +9,7 @@ import Sale from './src/models/Sale.js';
 import Customer from './src/models/Customer.js';
 import Painter from './src/models/Painter.js';
 import Item from './src/models/Item.js';
+import { getTestMongoUri } from './src/config/testDb.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -22,7 +23,7 @@ async function run() {
   console.log('   SALES + CUSTOMER + POINTS VERIFICATION SUITE  ');
   console.log('==================================================\n');
 
-  await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/paintshop_dev');
+  await mongoose.connect(getTestMongoUri());
   const server = http.createServer(app);
   await new Promise((r) => server.listen(PORT, r));
   console.log(`Test server on port ${PORT}\n`);
@@ -144,7 +145,8 @@ async function run() {
     const noActiveData = await noActiveSaleRes.json();
     ok(noActiveSaleRes.status === 409 && noActiveData.message?.toLowerCase().includes('active'), '10. Sale cannot be created without an active cycle (409)');
 
-    // Re-activate the cycle
+    // Re-activate the cycle (restore future endDate since close sets it to now)
+    await Cycle.findByIdAndUpdate(testCycleId, { endDate: new Date(cycleEnd) });
     await patch(`/cycles/${testCycleId}/activate`, adminToken);
 
     // Create a valid sale to test cycle assignment

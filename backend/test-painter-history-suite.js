@@ -9,6 +9,7 @@ import Sale from './src/models/Sale.js';
 import Customer from './src/models/Customer.js';
 import Painter from './src/models/Painter.js';
 import Item from './src/models/Item.js';
+import { getTestMongoUri } from './src/config/testDb.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -22,7 +23,7 @@ async function run() {
   console.log('   PART 7 — PAINTER HISTORY VERIFICATION SUITE   ');
   console.log('==================================================\n');
 
-  await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/paintshop_dev');
+  await mongoose.connect(getTestMongoUri());
   const server = http.createServer(app);
   await new Promise((r) => server.listen(PORT, r));
   console.log(`Test server running on port ${PORT}\n`);

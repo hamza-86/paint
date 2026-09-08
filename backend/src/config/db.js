@@ -7,10 +7,14 @@
  */
 
 import mongoose from 'mongoose';
+import { getTestMongoUri } from './testDb.js';
 
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI);
+    const mongoUri = process.env.NODE_ENV === 'test'
+      ? getTestMongoUri()
+      : process.env.MONGODB_URI;
+    const conn = await mongoose.connect(mongoUri);
     console.log(`✅  MongoDB connected: ${conn.connection.host}`);
   } catch (error) {
     console.error(`❌  MongoDB connection error: ${error.message}`);

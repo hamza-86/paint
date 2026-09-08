@@ -55,6 +55,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
+import { getTestMongoUri } from '../config/testDb.js';
 import '../models/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -111,7 +112,7 @@ async function run() {
   console.log('╚════════════════════════════════════════════════════════════════╝');
 
   // ── Database Connection for state verification ────────────────────────────
-  const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/paintshop_dev';
+  const mongoUri = getTestMongoUri();
   await mongoose.connect(mongoUri);
 
   const endpoints = [

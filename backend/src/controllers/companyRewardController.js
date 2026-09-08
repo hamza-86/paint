@@ -442,6 +442,18 @@ export const updateCompanyReward = async (req, res, next) => {
       entry.saleValue = sale;
     }
 
+    // rewardReceivedDescription
+    if (rewardReceivedDescription !== undefined) {
+      const trimmed = String(rewardReceivedDescription).trim();
+      if (!trimmed) {
+        return res.status(400).json({
+          success: false,
+          message: 'Reward description cannot be empty.',
+        });
+      }
+      entry.rewardReceivedDescription = trimmed;
+    }
+
     // rewardItems
     if (rewardItems !== undefined) {
       const itemError = validateRewardItems(rewardItems);

@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
 import Painter from './src/models/Painter.js';
 import Admin from './src/models/Admin.js';
+import { getTestMongoUri } from './src/config/testDb.js';
 
 dotenv.config();
 
@@ -14,7 +15,7 @@ async function runTestSuite() {
   console.log('==================================================\n');
 
   // Connect to DB directly for test setup / tear-down
-  const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/paintshop_dev';
+  const uri = getTestMongoUri();
   await mongoose.connect(uri);
 
   let passed = 0;

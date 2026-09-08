@@ -10,6 +10,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
+import { getTestMongoUri } from '../config/testDb.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -102,7 +103,7 @@ async function run() {
   console.log('   PART 11 — REWARD INVENTORY TEST SUITE          ');
   console.log('==================================================\n');
 
-  await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/paintshop_dev');
+  await mongoose.connect(getTestMongoUri());
 
   // Baseline counts for data safety
   const baselineSales = await Sale.countDocuments();

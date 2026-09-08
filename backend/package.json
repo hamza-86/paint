@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
-    "seed:admin": "node src/scripts/createAdmin.js"
+    "seed:admin": "node src/scripts/createAdmin.js",
+    "reset:database": "node src/scripts/resetDatabase.js"
   },
   "keywords": [
     "paint-shop",
