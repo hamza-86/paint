@@ -20,6 +20,19 @@ export function getRedirectPathForRole(role) {
   return '/login';
 }
 
+function getSafeCallbackPath(callbackUrl, role) {
+  if (
+    typeof callbackUrl === 'string' &&
+    callbackUrl.startsWith('/') &&
+    !callbackUrl.startsWith('//') &&
+    !callbackUrl.includes('\\')
+  ) {
+    return callbackUrl;
+  }
+
+  return getRedirectPathForRole(role);
+}
+
 /**
  * Perform login and handle role-based redirection.
  *
@@ -32,9 +45,9 @@ export async function loginUser(credentials, router, callbackUrl = null) {
   const data = await loginApi(credentials);
   const role = data.user?.role;
 
-  const targetPath = callbackUrl || getRedirectPathForRole(role);
+  const targetPath = getSafeCallbackPath(callbackUrl, role);
   if (router) {
-    router.push(targetPath);
+    router.replace(targetPath);
   }
 
   return data;

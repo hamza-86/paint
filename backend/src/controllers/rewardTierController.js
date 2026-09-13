@@ -451,7 +451,13 @@ export async function getPainterCurrentRewardTier(req, res) {
       });
     }
 
-    const activeCycle = await Cycle.findOne({ isActive: true });
+    const now = new Date();
+    await Cycle.updateMany(
+      { isActive: true, endDate: { $lte: now } },
+      { $set: { isActive: false } }
+    );
+
+    const activeCycle = await Cycle.findOne({ isActive: true, endDate: { $gt: now } }).sort({ startDate: -1 });
 
     if (!activeCycle) {
       return res.status(200).json({
@@ -488,12 +494,30 @@ export async function getPainterCurrentRewardTier(req, res) {
 
     const currentPoints = salesAgg?.currentPoints || 0;
 
-    // Find active tier where minPoints <= currentPoints <= maxPoints
-    const matchingTier = await RewardTier.findOne({
-      status: 'active',
-      minPoints: { $lte: currentPoints },
-      maxPoints: { $gte: currentPoints },
-    });
+    // Fetch active tiers sorted by minPoints ascending
+    const activeTiers = await RewardTier.find({ status: 'active' }).sort({ minPoints: 1, maxPoints: 1 });
+
+    let matchingTier = null;
+    if (activeTiers.length > 0) {
+      // 1. Direct match: points fall within [minPoints, maxPoints]
+      matchingTier = activeTiers.find(
+        (t) => currentPoints >= t.minPoints && currentPoints <= t.maxPoints
+      );
+
+      // 2. If points exceed the highest active tier's maxPoints, suggest the highest active tier
+      if (!matchingTier) {
+        const highestTier = activeTiers[activeTiers.length - 1];
+        if (currentPoints > highestTier.maxPoints) {
+          matchingTier = highestTier;
+        } else {
+          // If points fall between tiers, suggest highest qualified tier
+          const qualifiedTiers = activeTiers.filter((t) => currentPoints >= t.minPoints);
+          if (qualifiedTiers.length > 0) {
+            matchingTier = qualifiedTiers[qualifiedTiers.length - 1];
+          }
+        }
+      }
+    }
 
     return res.status(200).json({
       success: true,

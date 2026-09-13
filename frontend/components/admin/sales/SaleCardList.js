@@ -68,11 +68,15 @@ export default function SaleCardList({ sales = [], isLoading = false }) {
                   Customer
                 </span>
                 <p className="font-semibold text-slate-800 truncate">
-                  {sale.customer?.name || '—'}
+                  {sale.customer?.name || (
+                    <span className="text-slate-400 italic font-normal text-[11px]">Customer details not provided</span>
+                  )}
                 </p>
-                <p className="text-[11px] text-slate-500">
-                  {sale.customer?.mobile || ''}
-                </p>
+                {sale.customer?.mobile && (
+                  <p className="text-[11px] text-slate-500 font-mono">
+                    {sale.customer.mobile}
+                  </p>
+                )}
               </div>
               <div>
                 <span className="text-[10px] uppercase tracking-wider text-slate-400 font-medium">

@@ -690,11 +690,15 @@ export default function PainterDetailPage() {
                       </td>
                       <td className="py-3 px-4">
                         <span className="font-semibold text-slate-900 block">
-                          {sale.customer?.name || 'Walk-in Customer'}
+                          {sale.customer?.name || (
+                            <span className="text-slate-400 italic font-normal">Customer details not provided</span>
+                          )}
                         </span>
-                        <span className="text-[11px] text-slate-400">
-                          {sale.customer?.mobile || 'No Mobile'}
-                        </span>
+                        {sale.customer?.mobile && (
+                          <span className="text-[11px] text-slate-400 font-mono">
+                            {sale.customer.mobile}
+                          </span>
+                        )}
                       </td>
                       <td className="py-3 px-4 text-slate-600">
                         {sale.cycle ? (

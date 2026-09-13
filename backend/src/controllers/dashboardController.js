@@ -21,7 +21,12 @@ export const getSummary = async (req, res, next) => {
     ]);
 
     // 2. Active cycle & sales in active cycle
-    const activeCycle = await Cycle.findOne({ isActive: true });
+    const now = new Date();
+    await Cycle.updateMany(
+      { isActive: true, endDate: { $lte: now } },
+      { $set: { isActive: false } }
+    );
+    const activeCycle = await Cycle.findOne({ isActive: true, endDate: { $gt: now } }).sort({ startDate: -1 });
     let currentCycle = null;
 
     if (activeCycle) {
@@ -136,7 +141,12 @@ export const getTopPainters = async (req, res, next) => {
   try {
     const limit = Math.min(20, Math.max(1, parseInt(req.query.limit, 10) || 5));
 
-    const activeCycle = await Cycle.findOne({ isActive: true });
+    const now = new Date();
+    await Cycle.updateMany(
+      { isActive: true, endDate: { $lte: now } },
+      { $set: { isActive: false } }
+    );
+    const activeCycle = await Cycle.findOne({ isActive: true, endDate: { $gt: now } }).sort({ startDate: -1 });
     if (!activeCycle) {
       return res.status(200).json({
         success: true,

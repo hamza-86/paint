@@ -58,15 +58,33 @@ async function getPainterCyclePoints(painterId, cycleId) {
 
 /**
  * Find the best matching active RewardTier for a given points value.
- * Returns null if no tier matches.
+ * - Matches active tier if minPoints <= points <= maxPoints.
+ * - If points exceed highest active tier, suggests the highest active tier.
+ * - If points fall in a gap, suggests highest qualified tier.
+ * - Returns null if no tier qualifies or no active tiers exist.
  */
 async function findMatchingTier(points) {
-  const tier = await RewardTier.findOne({
-    status: 'active',
-    minPoints: { $lte: points },
-    maxPoints: { $gte: points },
-  }).sort({ minPoints: -1 });
-  return tier || null;
+  if (typeof points !== 'number' || points < 0) return null;
+  const activeTiers = await RewardTier.find({ status: 'active' }).sort({ minPoints: 1, maxPoints: 1 });
+  if (activeTiers.length === 0) return null;
+
+  // 1. Direct match
+  const matched = activeTiers.find((t) => points >= t.minPoints && points <= t.maxPoints);
+  if (matched) return matched;
+
+  // 2. If points exceed the highest active tier's maxPoints, suggest the highest active tier
+  const highestTier = activeTiers[activeTiers.length - 1];
+  if (points > highestTier.maxPoints) {
+    return highestTier;
+  }
+
+  // 3. If points fall between tiers, suggest highest qualified tier
+  const qualifiedTiers = activeTiers.filter((t) => points >= t.minPoints);
+  if (qualifiedTiers.length > 0) {
+    return qualifiedTiers[qualifiedTiers.length - 1];
+  }
+
+  return null;
 }
 
 // ── GET /api/painter-reward-assignments ───────────────────────────────────────
@@ -192,7 +210,13 @@ export async function getPainterEligibility(req, res, next) {
     if (!painter) return next(createError('Painter not found', 404));
 
     // 2. Find active cycle
-    const activeCycle = await Cycle.findOne({ isActive: true });
+    const now = new Date();
+    await Cycle.updateMany(
+      { isActive: true, endDate: { $lte: now } },
+      { $set: { isActive: false } }
+    );
+
+    const activeCycle = await Cycle.findOne({ isActive: true, endDate: { $gt: now } }).sort({ startDate: -1 });
     if (!activeCycle) {
       return res.status(200).json({
         status: 'success',
@@ -204,25 +228,6 @@ export async function getPainterEligibility(req, res, next) {
           suggestedInventoryItems: [],
           previousAssignments: [],
           message: 'No active cycle found',
-        },
-      });
-    }
-
-    // Check if active cycle has expired
-    const now = new Date();
-    if (activeCycle.endDate && now > new Date(activeCycle.endDate)) {
-      activeCycle.isActive = false;
-      await activeCycle.save();
-      return res.status(200).json({
-        status: 'success',
-        data: {
-          painter: { id: painter.id, name: painter.firstName, status: painter.status },
-          activeCycle: null,
-          points: 0,
-          suggestedTier: null,
-          suggestedInventoryItems: [],
-          previousAssignments: [],
-          message: 'No active cycle found. Previous cycle has expired.',
         },
       });
     }

@@ -93,11 +93,15 @@ export default function SaleTable({ sales = [], isLoading = false }) {
                   {/* Customer */}
                   <td className="px-5 py-3.5">
                     <div className="font-medium text-slate-800">
-                      {sale.customer?.name || '—'}
+                      {sale.customer?.name || (
+                        <span className="text-slate-400 italic font-normal">Customer details not provided</span>
+                      )}
                     </div>
-                    <div className="text-[11px] text-slate-400">
-                      {sale.customer?.mobile || '—'}
-                    </div>
+                    {sale.customer?.mobile && (
+                      <div className="text-[11px] text-slate-400 font-mono">
+                        {sale.customer.mobile}
+                      </div>
+                    )}
                   </td>
 
                   {/* Items summary */}

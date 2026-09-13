@@ -240,13 +240,7 @@ export default function RecordSaleModal({
       errs.painterId = 'Please select a referring painter.';
     }
 
-    if (!customerName.trim()) {
-      errs.customerName = 'Customer name is required.';
-    }
-
-    if (!customerMobile.trim()) {
-      errs.customerMobile = 'Customer mobile number is required.';
-    } else if (customerMobile.trim().length < 7) {
+    if (customerMobile.trim() && customerMobile.trim().length < 7) {
       errs.customerMobile = 'Enter a valid mobile number.';
     }
 
@@ -327,13 +321,15 @@ export default function RecordSaleModal({
 
     const formData = new FormData();
     formData.append('painterId', painterId);
-    formData.append(
-      'customer',
-      JSON.stringify({
-        name: customerName.trim(),
-        mobile: customerMobile.trim(),
-      })
-    );
+    if (customerName.trim() || customerMobile.trim()) {
+      formData.append(
+        'customer',
+        JSON.stringify({
+          name: customerName.trim(),
+          mobile: customerMobile.trim(),
+        })
+      );
+    }
     formData.append('date', saleDate);
     formData.append('lineItems', JSON.stringify(formattedLineItems));
 
@@ -473,12 +469,12 @@ export default function RecordSaleModal({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label htmlFor="customerName" className="block text-[11px] font-medium text-slate-600 mb-1">
-                  Customer Name <span className="text-red-500">*</span>
+                  Customer Name <span className="text-slate-400 font-normal">(Optional)</span>
                 </label>
                 <input
                   type="text"
                   id="customerName"
-                  placeholder="e.g. Ramesh Patel"
+                  placeholder="e.g. Ramesh Patel (optional)"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
                   disabled={isSubmitting}
@@ -493,7 +489,7 @@ export default function RecordSaleModal({
 
               <div>
                 <label htmlFor="customerMobile" className="block text-[11px] font-medium text-slate-600 mb-1">
-                  Mobile Number <span className="text-red-500">*</span>
+                  Mobile Number <span className="text-slate-400 font-normal">(Optional)</span>
                 </label>
                 <input
                   type="tel"

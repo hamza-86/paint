@@ -4,13 +4,15 @@ const customerSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: [true, 'Customer name is required'],
+      required: false,
+      default: '',
       trim: true,
       maxlength: [120, 'Name cannot exceed 120 characters'],
     },
     mobile: {
       type: String,
-      required: [true, 'Mobile number is required'],
+      required: false,
+      default: '',
       trim: true,
       index: true,
     },

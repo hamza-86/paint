@@ -59,13 +59,26 @@ async function getPainterCycleStats(painterId, cycleId) {
  */
 async function findMatchingTier(points) {
   if (typeof points !== 'number' || points < 0) return null;
-  const tier = await RewardTier.findOne({
-    status: 'active',
-    minPoints: { $lte: points },
-    maxPoints: { $gte: points },
-  }).sort({ minPoints: -1 });
+  const activeTiers = await RewardTier.find({ status: 'active' }).sort({ minPoints: 1, maxPoints: 1 });
+  if (activeTiers.length === 0) return null;
 
-  return tier || null;
+  // 1. Direct match
+  const matched = activeTiers.find((t) => points >= t.minPoints && points <= t.maxPoints);
+  if (matched) return matched;
+
+  // 2. If points exceed the highest active tier's maxPoints, suggest the highest active tier
+  const highestTier = activeTiers[activeTiers.length - 1];
+  if (points > highestTier.maxPoints) {
+    return highestTier;
+  }
+
+  // 3. If points fall between tiers, suggest highest qualified tier
+  const qualifiedTiers = activeTiers.filter((t) => points >= t.minPoints);
+  if (qualifiedTiers.length > 0) {
+    return qualifiedTiers[qualifiedTiers.length - 1];
+  }
+
+  return null;
 }
 
 /**
@@ -87,9 +100,24 @@ export async function getMe(req, res, next) {
     const painter = req.painter;
     if (!painter) return next(createError('Painter not found', 404));
 
-    // Resolve current cycle safely
+    // Resolve current cycle safely (prioritize unexpired active cycle)
+    const now = new Date();
+    await Cycle.updateMany(
+      { isActive: true, endDate: { $lte: now } },
+      { $set: { isActive: false } }
+    );
+
+    const activeCycle = await Cycle.findOne({ isActive: true, endDate: { $gt: now } }).sort({ startDate: -1 });
+
     let currentCycle = null;
-    if (painter.currentCycleId) {
+    if (activeCycle) {
+      currentCycle = {
+        id: String(activeCycle._id),
+        startDate: activeCycle.startDate,
+        endDate: activeCycle.endDate,
+        isActive: activeCycle.isActive,
+      };
+    } else if (painter.currentCycleId) {
       const cycleDoc = await Cycle.findById(painter.currentCycleId);
       if (cycleDoc) {
         currentCycle = {
@@ -97,18 +125,6 @@ export async function getMe(req, res, next) {
           startDate: cycleDoc.startDate,
           endDate: cycleDoc.endDate,
           isActive: cycleDoc.isActive,
-        };
-      }
-    }
-
-    if (!currentCycle) {
-      const activeCycle = await Cycle.findOne({ isActive: true });
-      if (activeCycle) {
-        currentCycle = {
-          id: String(activeCycle._id),
-          startDate: activeCycle.startDate,
-          endDate: activeCycle.endDate,
-          isActive: activeCycle.isActive,
         };
       }
     }
@@ -138,7 +154,12 @@ export async function getDashboard(req, res, next) {
     const painterId = painter._id;
 
     // 1. Resolve active cycle
-    const activeCycle = await Cycle.findOne({ isActive: true });
+    const now = new Date();
+    await Cycle.updateMany(
+      { isActive: true, endDate: { $lte: now } },
+      { $set: { isActive: false } }
+    );
+    const activeCycle = await Cycle.findOne({ isActive: true, endDate: { $gt: now } }).sort({ startDate: -1 });
 
     let currentCycleData = null;
     let currentPoints = 0;
@@ -212,7 +233,7 @@ export async function getDashboard(req, res, next) {
           }
         : null,
       lineItems: (s.lineItems || []).map((li) => ({
-        itemId: String(li.itemId),
+        itemId: li.itemId ? String(li.itemId) : null,
         itemName: li.itemName,
         quantity: li.quantity,
         pricePerUnit: li.pricePerUnit,
@@ -340,7 +361,7 @@ export async function getSales(req, res, next) {
           }
         : null,
       lineItems: (s.lineItems || []).map((li) => ({
-        itemId: String(li.itemId),
+        itemId: li.itemId ? String(li.itemId) : null,
         itemName: li.itemName,
         quantity: li.quantity,
         pricePerUnit: li.pricePerUnit,
@@ -387,7 +408,12 @@ export async function getEligibility(req, res, next) {
     const painterId = req.painter._id;
 
     // 1. Resolve active cycle
-    const activeCycle = await Cycle.findOne({ isActive: true });
+    const now = new Date();
+    await Cycle.updateMany(
+      { isActive: true, endDate: { $lte: now } },
+      { $set: { isActive: false } }
+    );
+    const activeCycle = await Cycle.findOne({ isActive: true, endDate: { $gt: now } }).sort({ startDate: -1 });
     if (!activeCycle) {
       return res.status(200).json({
         success: true,

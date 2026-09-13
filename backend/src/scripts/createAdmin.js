@@ -21,11 +21,43 @@ import 'dotenv/config';
 import mongoose from 'mongoose';
 import Admin from '../models/Admin.js';
 
+const getProductionDatabaseName = (mongoUri) => {
+  let databaseName;
+
+  try {
+    databaseName = new URL(mongoUri).pathname.replace(/^\//, '').split('?')[0];
+  } catch {
+    throw new Error('MONGODB_URI is not a valid MongoDB connection string.');
+  }
+
+  if (!databaseName) {
+    throw new Error('MONGODB_URI must include an explicit production database name.');
+  }
+
+  if (/(^|[-_])(dev|development|test|testing|local|staging|stage)([-_]|$)/i.test(databaseName)) {
+    throw new Error('MONGODB_URI targets a non-production database.');
+  }
+
+  return databaseName;
+};
+
 const seed = async () => {
   const { MONGODB_URI, ADMIN_EMAIL, ADMIN_PASSWORD } = process.env;
 
   if (!MONGODB_URI) {
-    console.error('❌  MONGODB_URI is not set in .env');
+    console.error('❌  MONGODB_URI is not set.');
+    process.exit(1);
+  }
+  if (process.env.NODE_ENV !== 'production') {
+    console.error('❌  NODE_ENV must be set to production.');
+    process.exit(1);
+  }
+
+  let databaseName;
+  try {
+    databaseName = getProductionDatabaseName(MONGODB_URI);
+  } catch (err) {
+    console.error(`❌  ${err.message}`);
     process.exit(1);
   }
   if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
@@ -40,6 +72,7 @@ const seed = async () => {
   }
 
   try {
+    console.log(`🎯  Target database: ${databaseName}`);
     await mongoose.connect(MONGODB_URI);
     console.log('✅  MongoDB connected');
 

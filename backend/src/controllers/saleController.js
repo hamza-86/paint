@@ -83,16 +83,12 @@ export const createSale = async (req, res, next) => {
       });
     }
 
-    // ── 3. Customer validation ───────────────────────────────────────────────
-    if (!customer || typeof customer !== 'object') {
-      return res.status(400).json({ success: false, message: 'customer object is required.' });
-    }
-    const { name: customerName, mobile: customerMobile } = customer;
-    if (!customerName || String(customerName).trim() === '') {
-      return res.status(400).json({ success: false, message: 'customer.name is required.' });
-    }
-    if (!customerMobile || String(customerMobile).trim() === '') {
-      return res.status(400).json({ success: false, message: 'customer.mobile is required.' });
+    // ── 3. Customer validation (optional) ────────────────────────────────────
+    let customerName = '';
+    let customerMobile = '';
+    if (customer && typeof customer === 'object') {
+      customerName = customer.name ? String(customer.name).trim() : '';
+      customerMobile = customer.mobile ? String(customer.mobile).trim() : '';
     }
 
     // ── 4. Line items validation (catalog + manual) ──────────────────────────
@@ -274,19 +270,24 @@ export const createSale = async (req, res, next) => {
       }
     }
 
-    // ── 7. Find or create Customer ────────────────────────────────────────────
-    let customerDoc = await Customer.findOne({ mobile: String(customerMobile).trim() });
-    if (!customerDoc) {
-      customerDoc = await Customer.create({
-        name: String(customerName).trim(),
-        mobile: String(customerMobile).trim(),
-      });
+    // ── 7. Find or create Customer (optional) ─────────────────────────────────
+    let customerDoc = null;
+    if (customerName || customerMobile) {
+      if (customerMobile) {
+        customerDoc = await Customer.findOne({ mobile: customerMobile });
+      }
+      if (!customerDoc) {
+        customerDoc = await Customer.create({
+          name: customerName || 'Valued Customer',
+          mobile: customerMobile || '',
+        });
+      }
     }
 
     // ── 8. Create Sale ────────────────────────────────────────────────────────
     const sale = await Sale.create({
       painterId: painter._id,
-      customerId: customerDoc._id,
+      customerId: customerDoc ? customerDoc._id : null,
       cycleId: activeCycle._id,
       date: saleDate,
       billImageUrl: finalBillUrl,
@@ -363,7 +364,7 @@ export const getSales = async (req, res, next) => {
       customer: s.customerId ? { id: String(s.customerId._id), ...s.customerId, _id: undefined } : null,
       cycle: s.cycleId ? { id: String(s.cycleId._id), ...s.cycleId, _id: undefined } : null,
       painterId: s.painterId?._id ? String(s.painterId._id) : (s.painterId ? String(s.painterId) : undefined),
-      customerId: s.customerId?._id ? String(s.customerId._id) : (s.customerId ? String(s.customerId) : undefined),
+      customerId: s.customerId?._id ? String(s.customerId._id) : (s.customerId ? String(s.customerId) : null),
       cycleId: s.cycleId?._id ? String(s.cycleId._id) : (s.cycleId ? String(s.cycleId) : undefined),
     }));
 
@@ -430,7 +431,7 @@ export const getSaleById = async (req, res, next) => {
       customer: sale.customerId ? { id: String(sale.customerId._id), ...sale.customerId, _id: undefined } : null,
       cycle: sale.cycleId ? { id: String(sale.cycleId._id), ...sale.cycleId, _id: undefined } : null,
       painterId: sale.painterId?._id ? String(sale.painterId._id) : (sale.painterId ? String(sale.painterId) : undefined),
-      customerId: sale.customerId?._id ? String(sale.customerId._id) : (sale.customerId ? String(sale.customerId) : undefined),
+      customerId: sale.customerId?._id ? String(sale.customerId._id) : (sale.customerId ? String(sale.customerId) : null),
       cycleId: sale.cycleId?._id ? String(sale.cycleId._id) : (sale.cycleId ? String(sale.cycleId) : undefined),
       lineItems: (sale.lineItems || []).map((li) => ({
         ...li,

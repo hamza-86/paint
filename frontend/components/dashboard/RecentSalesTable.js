@@ -91,10 +91,12 @@ export default function RecentSalesTable({ sales = [], isLoading }) {
                     <td className="py-3">
                       <div className="text-xs">
                         <span className="font-medium text-slate-800">
-                          {sale.customer?.name || 'Customer'}
+                          {sale.customer?.name || (
+                            <span className="text-slate-400 italic font-normal">Customer details not provided</span>
+                          )}
                         </span>
                         {sale.customer?.mobile && (
-                          <span className="text-slate-400 block">
+                          <span className="text-slate-400 block font-mono text-[11px]">
                             {sale.customer.mobile}
                           </span>
                         )}

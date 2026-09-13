@@ -58,6 +58,10 @@ npm run dev
 
 Frontend will run on `http://localhost:3000`.
 
+For a deployed frontend, set `NEXT_PUBLIC_API_URL` to the backend API URL, for
+example `https://paint-shop-backend-xgjz.onrender.com/api`. The frontend proxy
+uses that live backend URL by default when the variable is not configured.
+
 ---
 
 ## Deployment Strategy

@@ -118,9 +118,13 @@ export default function PainterSalesPage() {
                   <span className="text-xs font-bold text-slate-300 bg-slate-800 px-2.5 py-1 rounded-lg">
                     {formatDate(sale.date)}
                   </span>
-                  {sale.customer?.name && (
+                  {sale.customer?.name ? (
                     <span className="text-xs text-slate-400">
                       Customer: <strong className="text-slate-200">{sale.customer.name}</strong>
+                    </span>
+                  ) : (
+                    <span className="text-xs text-slate-500 italic">
+                      Customer details not provided
                     </span>
                   )}
                   {sale.cycle && (

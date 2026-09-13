@@ -193,7 +193,7 @@ export default function AdminSaleDetailPage() {
                 <div className="text-[10px] text-emerald-600 font-medium mt-1">Verified Customer</div>
               </div>
             ) : (
-              <p className="text-xs text-slate-500">Customer record attached</p>
+              <p className="text-xs text-slate-400 italic">Customer details not provided</p>
             )}
           </div>
 

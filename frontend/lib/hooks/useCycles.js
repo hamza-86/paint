@@ -38,6 +38,24 @@ export function useCycle(id) {
   });
 }
 
+function invalidateCycleRelatedQueries(queryClient, cycleId) {
+  queryClient.invalidateQueries({ queryKey: ['cycles'] });
+  if (cycleId) {
+    queryClient.invalidateQueries({ queryKey: ['cycle', cycleId] });
+  }
+  queryClient.invalidateQueries({ queryKey: ['active-cycle'] });
+  queryClient.invalidateQueries({ queryKey: ['painter-reward-assignments'] });
+  queryClient.invalidateQueries({ queryKey: ['painters'] });
+  queryClient.invalidateQueries({ queryKey: ['painter-current-tier'] });
+  queryClient.invalidateQueries({ queryKey: ['painter-history'] });
+  queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
+  queryClient.invalidateQueries({ queryKey: ['top-painters'] });
+  queryClient.invalidateQueries({ queryKey: ['sales'] });
+  queryClient.invalidateQueries({ queryKey: ['sales-trend'] });
+  queryClient.invalidateQueries({ queryKey: ['recent-sales'] });
+  queryClient.invalidateQueries({ queryKey: ['painter-portal'] });
+}
+
 /**
  * Hook to create a new cycle.
  */
@@ -46,8 +64,9 @@ export function useCreateCycle() {
 
   return useMutation({
     mutationFn: (data) => createCycleApi(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['cycles'] });
+    onSuccess: (result) => {
+      const cycleId = result?.data?.id || result?.data?._id;
+      invalidateCycleRelatedQueries(queryClient, cycleId);
     },
   });
 }
@@ -61,8 +80,7 @@ export function useActivateCycle() {
   return useMutation({
     mutationFn: (id) => activateCycleApi(id),
     onSuccess: (result, id) => {
-      queryClient.invalidateQueries({ queryKey: ['cycles'] });
-      queryClient.invalidateQueries({ queryKey: ['cycle', id] });
+      invalidateCycleRelatedQueries(queryClient, id);
     },
   });
 }
@@ -76,8 +94,7 @@ export function useCloseCycle() {
   return useMutation({
     mutationFn: (id) => closeCycleApi(id),
     onSuccess: (result, id) => {
-      queryClient.invalidateQueries({ queryKey: ['cycles'] });
-      queryClient.invalidateQueries({ queryKey: ['cycle', id] });
+      invalidateCycleRelatedQueries(queryClient, id);
     },
   });
 }

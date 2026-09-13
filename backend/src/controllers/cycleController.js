@@ -205,13 +205,8 @@ export const createCycle = async (req, res, next) => {
         });
       }
 
-      const activeCycle = await Cycle.findOne({ isActive: true, endDate: { $gt: now } });
-      if (activeCycle) {
-        return res.status(409).json({
-          success: false,
-          message: `Another cycle is already active (ID: ${activeCycle._id}). Please close the current active cycle before creating or activating a new one.`,
-        });
-      }
+      // Deactivate any previous active cycles
+      await Cycle.updateMany({ isActive: true }, { $set: { isActive: false } });
     }
 
     // ── Create cycle ──────────────────────────────────────────────────────────
@@ -283,14 +278,8 @@ export const activateCycle = async (req, res, next) => {
       });
     }
 
-    // Check for another unexpired active cycle
-    const activeCycle = await Cycle.findOne({ _id: { $ne: cycle._id }, isActive: true, endDate: { $gt: now } });
-    if (activeCycle) {
-      return res.status(409).json({
-        success: false,
-        message: `Another cycle is already active (ID: ${activeCycle._id}). Please close the current active cycle before activating this one.`,
-      });
-    }
+    // Deactivate any previously active cycles
+    await Cycle.updateMany({ _id: { $ne: cycle._id }, isActive: true }, { $set: { isActive: false } });
 
     cycle.isActive = true;
     await cycle.save();
@@ -350,6 +339,9 @@ export const closeCycle = async (req, res, next) => {
       }
     }
     await cycle.save();
+
+    // Unset painter currentCycleId pointing to this closed cycle
+    await Painter.updateMany({ currentCycleId: cycle._id }, { $unset: { currentCycleId: 1 } });
 
     res.status(200).json({
       success: true,

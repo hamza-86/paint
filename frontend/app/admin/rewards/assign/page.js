@@ -275,7 +275,9 @@ function AssignModal({ painter, eligibility, onClose, onSuccess }) {
                         {suggestedTier.suggestedRewardName}
                       </span>
                       <span className="text-[10px] text-slate-400">
-                        Tier: {suggestedTier.minPoints}–{suggestedTier.maxPoints} pts
+                        {points > suggestedTier.maxPoints
+                          ? `Highest Tier (${suggestedTier.minPoints}–${suggestedTier.maxPoints} pts)`
+                          : `Tier: ${suggestedTier.minPoints}–${suggestedTier.maxPoints} pts`}
                       </span>
                     </div>
                   ) : (
@@ -919,7 +921,9 @@ export default function PainterRewardAssignPage() {
                           {eligibilityData.suggestedTier.suggestedRewardName}
                         </span>
                         <span className="text-[10px] text-purple-600/80 mt-0.5 block">
-                          Tier: {eligibilityData.suggestedTier.minPoints}–{eligibilityData.suggestedTier.maxPoints} pts
+                          {(eligibilityData.points || 0) > eligibilityData.suggestedTier.maxPoints
+                            ? `Highest Tier (${eligibilityData.suggestedTier.minPoints}–${eligibilityData.suggestedTier.maxPoints} pts)`
+                            : `Tier: ${eligibilityData.suggestedTier.minPoints}–${eligibilityData.suggestedTier.maxPoints} pts`}
                         </span>
                       </div>
                     ) : (

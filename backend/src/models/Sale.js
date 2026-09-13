@@ -60,7 +60,8 @@ const saleSchema = new mongoose.Schema(
     customerId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Customer',
-      required: [true, 'Customer is required'],
+      required: false,
+      default: null,
       index: true,
     },
     cycleId: {
