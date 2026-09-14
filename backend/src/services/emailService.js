@@ -39,8 +39,23 @@ function createTransporter() {
     host,
     port,
     secure: port === 465, // true for port 465 (SSL), false for 587 (STARTTLS)
+    family: 4, // Force IPv4 to prevent ENETUNREACH on IPv6-disabled cloud runtimes (e.g. Render)
+    connectionTimeout: 10000, // 10 seconds
+    greetingTimeout: 10000, // 10 seconds
+    socketTimeout: 15000, // 15 seconds
     auth: { user, pass },
   });
+}
+
+/**
+ * verifyEmailTransport()
+ * ───────────────────────
+ * Verifies SMTP connection configuration without exposing secrets or sending an email.
+ * @returns {Promise<boolean>}
+ */
+export async function verifyEmailTransport() {
+  const transporter = createTransporter();
+  return transporter.verify();
 }
 
 /**
