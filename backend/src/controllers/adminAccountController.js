@@ -152,11 +152,16 @@ export const requestEmailChange = async (req, res, next) => {
       });
     }
 
-    // 7. Generate OTP, hash it, persist the record
+    // 7. Generate OTP & hash it
     const otp = generateOtp();
     const otpHash = await bcrypt.hash(otp, 10);
     const expiresAt = new Date(Date.now() + OTP_EXPIRES_MINUTES * 60 * 1000);
 
+    // 8. Attempt email delivery FIRST
+    //    If delivery fails, do not leave a usable or rate-counted OTP in DB.
+    await sendOtpEmail(normalizedNewEmail, otp, 'email_change');
+
+    // 9. Persist the record ONLY after delivery succeeds
     await AdminOtp.create({
       adminId,
       purpose: 'email_change',
@@ -165,16 +170,19 @@ export const requestEmailChange = async (req, res, next) => {
       expiresAt,
     });
 
-    // 8. Send OTP to the NEW email address
-    await sendOtpEmail(normalizedNewEmail, otp, 'email_change');
-
-    // 9. Respond — OTP is NOT included
+    // 10. Respond — OTP is NOT included
     return res.status(200).json({
       success: true,
       message: `Verification code sent to ${normalizedNewEmail}. It expires in ${OTP_EXPIRES_MINUTES} minutes.`,
       sentTo: normalizedNewEmail,
     });
   } catch (err) {
+    if (err.statusCode) {
+      return res.status(err.statusCode).json({
+        success: false,
+        message: err.message,
+      });
+    }
     next(err);
   }
 };
@@ -349,19 +357,19 @@ export const requestPasswordChange = async (req, res, next) => {
     const otpHash = await bcrypt.hash(otp, 10);
     const expiresAt = new Date(Date.now() + OTP_EXPIRES_MINUTES * 60 * 1000);
 
-    // Store the pre-hashed new password in the OTP record's newEmail field
-    // (reused as a generic payload field for password_change).
-    // We use a separate dedicated field to keep things clear.
+    // 8. Attempt email delivery to admin's current email FIRST
+    //    If delivery fails, do not leave a usable or rate-counted OTP in DB.
+    await sendOtpEmail(admin.email, otp, 'password_change');
+
+    // 9. Persist the record ONLY after delivery succeeds
+    //    Store the pre-hashed new password in the OTP record's newEmail field.
     await AdminOtp.create({
       adminId,
       purpose: 'password_change',
       otpHash,
-      newEmail: newPasswordHash, // Stores pre-hashed new password for this purpose
+      newEmail: newPasswordHash,
       expiresAt,
     });
-
-    // 8. Send OTP to the admin's CURRENT email
-    await sendOtpEmail(admin.email, otp, 'password_change');
 
     return res.status(200).json({
       success: true,
@@ -369,6 +377,12 @@ export const requestPasswordChange = async (req, res, next) => {
       sentTo: admin.email,
     });
   } catch (err) {
+    if (err.statusCode) {
+      return res.status(err.statusCode).json({
+        success: false,
+        message: err.message,
+      });
+    }
     next(err);
   }
 };

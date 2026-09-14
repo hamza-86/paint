@@ -1,113 +1,54 @@
 /**
  * emailService.js
  * ───────────────
- * Thin wrapper around nodemailer for sending transactional OTP emails.
+ * Transactional email delivery service using the Resend HTTPS API.
+ * Uses HTTPS over port 443 — avoiding cloud platform outbound SMTP port
+ * blocking (ports 25, 465, 587 are blocked on Render Free).
  *
- * Required environment variables (set in Render dashboard for production):
- *   EMAIL_HOST   — SMTP host  (e.g. smtp.gmail.com)
- *   EMAIL_PORT   — SMTP port  (e.g. 587 for STARTTLS, 465 for SSL)
- *   EMAIL_USER   — SMTP login username
- *   EMAIL_PASS   — SMTP password / App Password (NEVER logged or exposed)
- *   EMAIL_FROM   — Sender address (e.g. "Paint Shop <noreply@example.com>")
+ * Required environment variables:
+ *   RESEND_API_KEY — Resend API Key (re_...)
+ *   EMAIL_FROM     — Verified sender address (e.g. "Paint Shop <onboarding@resend.dev>")
  *
- * The OTP value is accepted as a parameter and embedded in email HTML.
- * It is NEVER logged, returned in a response, or stored plaintext.
+ * The OTP value is accepted as a parameter and embedded in email HTML/text.
+ * It is NEVER logged, returned in an API response, or stored plaintext.
  */
 
-import dns from 'dns';
-import net from 'net';
-import nodemailer from 'nodemailer';
-
-/**
- * Resolve an SMTP hostname to an IPv4 address dynamically to prevent ENETUNREACH
- * on cloud runtimes without functional outbound IPv6 routing (e.g., Render containers).
- *
- * @param {string} hostname e.g. "smtp.gmail.com"
- * @returns {Promise<string>} An IPv4 address, or the original hostname if resolution fails
- */
-async function resolveIpv4Host(hostname) {
-  if (!hostname || net.isIP(hostname)) {
-    return hostname;
-  }
-  try {
-    const addresses = await dns.promises.resolve4(hostname);
-    if (addresses && addresses.length > 0) {
-      return addresses[0];
-    }
-  } catch {
-    try {
-      const lookupResult = await dns.promises.lookup(hostname, { family: 4 });
-      if (lookupResult && lookupResult.address) {
-        return lookupResult.address;
-      }
-    } catch {
-      // Fall back to original hostname if IPv4 lookup fails
-    }
-  }
-  return hostname;
-}
-
-/**
- * Build a one-time transporter for each send.
- * Using `createTransport` each call avoids stale connection issues
- * on long-running serverless/Render instances.
- */
-async function createTransporter() {
-  const host = process.env.EMAIL_HOST;
-  const port = parseInt(process.env.EMAIL_PORT || '587', 10);
-  const user = process.env.EMAIL_USER;
-  const pass = process.env.EMAIL_PASS;
-
-  if (!host || !user || !pass) {
-    throw new Error(
-      'Email service is not configured. ' +
-        'Set EMAIL_HOST, EMAIL_PORT, EMAIL_USER, EMAIL_PASS, and EMAIL_FROM ' +
-        'in your environment variables.'
-    );
-  }
-
-  // Resolve to IPv4 dynamically to avoid Nodemailer's internal dual-stack
-  // resolver which picks IPv6 addresses at random and triggers ENETUNREACH.
-  const resolvedHost = await resolveIpv4Host(host);
-
-  return nodemailer.createTransport({
-    host: resolvedHost,
-    port,
-    secure: port === 465, // true for port 465 (SSL), false for 587 (STARTTLS)
-    servername: host, // Preserve host domain for SNI and TLS certificate validation
-    tls: {
-      servername: host, // Ensure TLS SNI matches the canonical hostname (e.g. smtp.gmail.com)
-    },
-    connectionTimeout: 10000, // 10 seconds
-    greetingTimeout: 10000, // 10 seconds
-    socketTimeout: 15000, // 15 seconds
-    auth: { user, pass },
-  });
-}
+import { Resend } from 'resend';
 
 /**
  * verifyEmailTransport()
  * ───────────────────────
- * Verifies SMTP connection configuration without exposing secrets or sending an email.
+ * Verifies that the Resend API key is configured.
  * @returns {Promise<boolean>}
  */
 export async function verifyEmailTransport() {
-  const transporter = await createTransporter();
-  return transporter.verify();
+  if (!process.env.RESEND_API_KEY) {
+    throw new Error('Email service is not configured. RESEND_API_KEY is missing.');
+  }
+  return true;
 }
 
 /**
  * sendOtpEmail(to, otp, purpose)
  * ──────────────────────────────
- * Sends a branded OTP email to the specified address.
+ * Sends a branded OTP email to the specified address via Resend HTTPS API.
  *
  * @param {string} to      — Recipient email address
- * @param {string} otp     — 6-digit OTP string (handled here only, never stored)
+ * @param {string} otp     — 6-digit OTP string (handled in memory only, never stored)
  * @param {'email_change'|'password_change'} purpose
  * @returns {Promise<void>}
  */
 export async function sendOtpEmail(to, otp, purpose) {
-  const transporter = await createTransporter();
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.error('[EmailService] RESEND_API_KEY environment variable is not set.');
+    const error = new Error('Unable to send verification email. Please try again.');
+    error.statusCode = 500;
+    throw error;
+  }
+
+  const resend = new Resend(apiKey);
+  const from = process.env.EMAIL_FROM || 'Paint Shop <onboarding@resend.dev>';
 
   const subjectMap = {
     email_change: 'Verify your new email address — Paint Shop',
@@ -199,12 +140,21 @@ export async function sendOtpEmail(to, otp, purpose) {
 </html>
   `.trim();
 
-  await transporter.sendMail({
-    from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
-    to,
+  const text = `${heading}\n\n${bodyText}\n\nYour verification code: ${otp}\n\nThis code expires in 10 minutes.\n\nIf you did not request this, ignore this email.`;
+
+  const { error } = await resend.emails.send({
+    from,
+    to: [to],
     subject,
     html,
-    // Plain-text fallback (no OTP in logs — only the format string)
-    text: `${heading}\n\n${bodyText}\n\nYour verification code: ${otp}\n\nThis code expires in 10 minutes.\n\nIf you did not request this, ignore this email.`,
+    text,
   });
+
+  if (error) {
+    // Log API error message safely without logging OTP or credentials
+    console.error(`[EmailService] Resend API error: ${error.message || JSON.stringify(error)}`);
+    const deliveryError = new Error('Unable to send verification email. Please try again.');
+    deliveryError.statusCode = 500;
+    throw deliveryError;
+  }
 }
