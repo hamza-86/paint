@@ -19,6 +19,7 @@ import rewardInventoryRoutes from './routes/rewardInventoryRoutes.js';
 import painterRewardAssignmentRoutes from './routes/painterRewardAssignmentRoutes.js';
 import painterPortalRoutes from './routes/painterPortalRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
+import adminAccountRoutes from './routes/adminAccountRoutes.js';
 
 const app = express();
 
@@ -72,6 +73,7 @@ app.use('/api/reward-inventory', rewardInventoryRoutes);
 app.use('/api/painter-reward-assignments', painterRewardAssignmentRoutes);
 app.use('/api/painter-portal', painterPortalRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/admin/account', adminAccountRoutes);
 
 
 // ── 404 Handler ──────────────────────────────────────────────────────────────
