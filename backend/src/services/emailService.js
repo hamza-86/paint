@@ -14,14 +14,45 @@
  * It is NEVER logged, returned in a response, or stored plaintext.
  */
 
+import dns from 'dns';
+import net from 'net';
 import nodemailer from 'nodemailer';
+
+/**
+ * Resolve an SMTP hostname to an IPv4 address dynamically to prevent ENETUNREACH
+ * on cloud runtimes without functional outbound IPv6 routing (e.g., Render containers).
+ *
+ * @param {string} hostname e.g. "smtp.gmail.com"
+ * @returns {Promise<string>} An IPv4 address, or the original hostname if resolution fails
+ */
+async function resolveIpv4Host(hostname) {
+  if (!hostname || net.isIP(hostname)) {
+    return hostname;
+  }
+  try {
+    const addresses = await dns.promises.resolve4(hostname);
+    if (addresses && addresses.length > 0) {
+      return addresses[0];
+    }
+  } catch {
+    try {
+      const lookupResult = await dns.promises.lookup(hostname, { family: 4 });
+      if (lookupResult && lookupResult.address) {
+        return lookupResult.address;
+      }
+    } catch {
+      // Fall back to original hostname if IPv4 lookup fails
+    }
+  }
+  return hostname;
+}
 
 /**
  * Build a one-time transporter for each send.
  * Using `createTransport` each call avoids stale connection issues
  * on long-running serverless/Render instances.
  */
-function createTransporter() {
+async function createTransporter() {
   const host = process.env.EMAIL_HOST;
   const port = parseInt(process.env.EMAIL_PORT || '587', 10);
   const user = process.env.EMAIL_USER;
@@ -35,11 +66,18 @@ function createTransporter() {
     );
   }
 
+  // Resolve to IPv4 dynamically to avoid Nodemailer's internal dual-stack
+  // resolver which picks IPv6 addresses at random and triggers ENETUNREACH.
+  const resolvedHost = await resolveIpv4Host(host);
+
   return nodemailer.createTransport({
-    host,
+    host: resolvedHost,
     port,
     secure: port === 465, // true for port 465 (SSL), false for 587 (STARTTLS)
-    family: 4, // Force IPv4 to prevent ENETUNREACH on IPv6-disabled cloud runtimes (e.g. Render)
+    servername: host, // Preserve host domain for SNI and TLS certificate validation
+    tls: {
+      servername: host, // Ensure TLS SNI matches the canonical hostname (e.g. smtp.gmail.com)
+    },
     connectionTimeout: 10000, // 10 seconds
     greetingTimeout: 10000, // 10 seconds
     socketTimeout: 15000, // 15 seconds
@@ -54,7 +92,7 @@ function createTransporter() {
  * @returns {Promise<boolean>}
  */
 export async function verifyEmailTransport() {
-  const transporter = createTransporter();
+  const transporter = await createTransporter();
   return transporter.verify();
 }
 
@@ -69,7 +107,7 @@ export async function verifyEmailTransport() {
  * @returns {Promise<void>}
  */
 export async function sendOtpEmail(to, otp, purpose) {
-  const transporter = createTransporter();
+  const transporter = await createTransporter();
 
   const subjectMap = {
     email_change: 'Verify your new email address — Paint Shop',
