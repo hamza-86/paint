@@ -337,7 +337,7 @@ function ChangeEmailModal({ open, onClose, currentEmail, onSuccess }) {
             disabled={loading}
             className="w-full text-xs text-slate-400 hover:text-blue-600 transition text-center"
           >
-            Didn't receive it? Resend code
+            Didn&apos;t receive it? Resend code
           </button>
         </form>
       )}
@@ -537,7 +537,7 @@ function ChangePasswordModal({ open, onClose, currentEmail }) {
             disabled={loading}
             className="w-full text-xs text-slate-400 hover:text-blue-600 transition text-center"
           >
-            Didn't receive it? Resend code
+            Didn&apos;t receive it? Resend code
           </button>
         </form>
       )}

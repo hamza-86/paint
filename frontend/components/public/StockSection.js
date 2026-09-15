@@ -49,7 +49,7 @@ export default function StockSection() {
             </svg>
             <h3>Wallpapers</h3>
             <p>
-              Design wallpapers to finish a room paint can't — patterns and textures for feature walls, picked in-store.
+              Design wallpapers to finish a room paint can&apos;t — patterns and textures for feature walls, picked in-store.
             </p>
           </div>
 

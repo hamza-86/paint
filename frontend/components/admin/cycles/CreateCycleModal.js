@@ -16,6 +16,7 @@ export default function CreateCycleModal({ isOpen, onClose, onSuccess, hasActive
 
   useEffect(() => {
     if (isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormData({ startDate: '', endDate: '', isActive: false });
       setErrors({});
       setServerError('');

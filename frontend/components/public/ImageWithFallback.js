@@ -27,6 +27,7 @@ export default function ImageWithFallback({
   const imgRef = useRef(null);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setHasError(false);
     setRetryKey(0);
   }, [cleanSrc]);

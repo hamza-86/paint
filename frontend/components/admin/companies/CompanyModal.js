@@ -18,6 +18,7 @@ export default function CompanyModal({
   useEffect(() => {
     if (isOpen) {
       if (company) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setName(company.name || '');
         setDetails(company.details || '');
       } else {

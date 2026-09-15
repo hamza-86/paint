@@ -60,6 +60,7 @@ export default function CompanyRewardModal({
   useEffect(() => {
     if (isOpen) {
       if (entry) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setCompanyId(entry.company?.id || String(entry.companyId || ''));
         setDateFrom(parseLocalDate(entry.dateFrom));
         setDateTo(parseLocalDate(entry.dateTo));

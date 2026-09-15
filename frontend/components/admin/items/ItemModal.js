@@ -47,6 +47,7 @@ export default function ItemModal({ isOpen, onClose, item = null, onSuccess }) {
   // Populate form on edit or reset on create
   useEffect(() => {
     if (item) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormData({
         name: item.name || '',
         price: item.price !== undefined ? String(item.price) : '',

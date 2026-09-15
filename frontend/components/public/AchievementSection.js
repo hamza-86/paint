@@ -21,7 +21,7 @@ export default function AchievementSection() {
           </div>
           <h2 className="about-title">Recognised by the brands we sell</h2>
           <p style={{ fontSize: '1.02rem', lineHeight: 1.7, color: '#3B332E', maxWidth: '520px' }}>
-            Harun Aziz Paints &amp; Tools was named to Nerolac's Emerging Stars Dealer Club — a mark of consistent sales and customer trust that the shop has carried forward every year since.
+            Harun Aziz Paints &amp; Tools was named to Nerolac&apos;s Emerging Stars Dealer Club — a mark of consistent sales and customer trust that the shop has carried forward every year since.
           </p>
         </div>
       </div>

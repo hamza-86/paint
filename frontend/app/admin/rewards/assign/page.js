@@ -61,6 +61,7 @@ function SafeRewardImage({ src, alt, className = 'w-9 h-9' }) {
   const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setHasError(false);
   }, [src]);
 
@@ -112,6 +113,7 @@ function AssignModal({ painter, eligibility, onClose, onSuccess }) {
         (i) => (i._id || i.id) === suggestedTier.suggestedInventoryItemId
       );
       if (match && match.remainingQty > 0) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setSelectedItemId(match._id || match.id);
         return;
       }

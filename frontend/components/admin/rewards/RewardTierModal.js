@@ -29,6 +29,7 @@ export default function RewardTierModal({
   useEffect(() => {
     if (isOpen) {
       if (tier) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setMinPoints(String(tier.minPoints));
         setMaxPoints(String(tier.maxPoints));
         setSuggestedInventoryItemId(

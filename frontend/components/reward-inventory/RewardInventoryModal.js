@@ -47,6 +47,7 @@ export default function RewardInventoryModal({
   // Reset or initialize form when opened or item changes
   useEffect(() => {
     if (!isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedEntryId('');
       setSelectedRewardItemId('');
       setName('');
@@ -325,7 +326,7 @@ export default function RewardInventoryModal({
                     </span>
                   </div>
                   <p className="text-xs text-slate-600 italic">
-                    "{selectedEntry.rewardReceivedDescription}"
+                    &quot;{selectedEntry.rewardReceivedDescription}&quot;
                   </p>
 
                   <div className="pt-2 border-t border-blue-100">
