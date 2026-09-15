@@ -142,6 +142,13 @@ export function activatePainterApi(id) {
 }
 
 /**
+ * GET /api/items/public
+ */
+export function getPublicCatalogItemsApi() {
+  return apiFetch('/items/public');
+}
+
+/**
  * GET /api/items/meta/brands
  */
 export function getItemBrandsApi() {

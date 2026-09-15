@@ -133,6 +133,33 @@ export const getItemCategories = async (req, res, next) => {
 };
 
 /**
+ * GET /api/items/public
+ * Read-only storefront catalog for active items only.
+ * Public access; excludes private business data.
+ */
+export const getPublicCatalogItems = async (req, res, next) => {
+  try {
+    const items = await Item.find({ status: 'active' })
+      .sort({ category: 1, brand: 1, name: 1 })
+      .select('_id name price brand category imageUrl')
+      .lean();
+
+    const sanitized = items.map((item) => ({
+      _id: item._id,
+      name: item.name,
+      price: Number(item.price),
+      brand: item.brand || '',
+      category: item.category || '',
+      imageUrl: item.imageUrl || '',
+    }));
+
+    res.status(200).json(sanitized);
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
  * GET /api/items/:id/sales
  * Get paginated sales history that includes this item.
  * Admin only.

@@ -8,12 +8,16 @@ import {
   activateItem,
   getItemBrands,
   getItemCategories,
+  getPublicCatalogItems,
   getItemSalesHistory,
 } from '../controllers/itemController.js';
 import { protect, authorize } from '../middleware/auth.js';
 import { upload } from '../middleware/upload.js';
 
 const router = express.Router();
+
+// Public read-only catalog route must remain accessible without admin auth.
+router.get('/public', getPublicCatalogItems);
 
 // All item catalog management endpoints require authentication and admin authorization.
 // Painter role users are rejected with 403 Forbidden.

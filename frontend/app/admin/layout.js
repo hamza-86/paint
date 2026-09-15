@@ -1,8 +1,8 @@
 import AdminLayout from '@/components/admin/AdminLayout';
 
 export const metadata = {
-  title: 'Admin Portal | Paint Shop Platform',
-  description: 'Shop Owner Management Portal for Painters, Sales, and Rewards.',
+  title: 'Admin Portal | Harun Aziz Paints & Tools',
+  description: 'Shop Owner Management Portal for Harun Aziz Paints & Tools.',
 };
 
 export default function Layout({ children }) {

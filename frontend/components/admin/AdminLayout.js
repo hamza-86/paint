@@ -29,7 +29,7 @@ export default function AdminLayout({ children }) {
 
         <footer className="py-4 px-6 border-t border-slate-200 text-center text-xs text-slate-400 bg-white">
           <p>
-            Paint Shop Painter Management Platform &bull; Single Shop Edition &copy;{' '}
+            Harun Aziz Paints &amp; Tools &bull; Shop Owner Portal &copy;{' '}
             {new Date().getFullYear()}
           </p>
         </footer>

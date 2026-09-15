@@ -3,6 +3,8 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import ImageWithFallback from '@/components/public/ImageWithFallback';
+import { SHOP_IMAGES, SHOP_INFO } from '@/components/public/shopConfig';
 
 const NAV_ITEMS = [
   {
@@ -153,20 +155,21 @@ export default function AdminSidebar({ isOpen, onClose }) {
         <Link
           href="/admin"
           onClick={onClose}
-          className="flex items-center gap-3 group focus-visible:ring-2 focus-visible:ring-blue-500 rounded-lg p-1"
+          className="flex items-center gap-3 group focus-visible:ring-2 focus-visible:ring-blue-500 rounded-lg p-1 w-full min-w-0"
         >
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-amber-500 flex items-center justify-center shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform">
-            <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="m18 2-4 4-2-2-4 4 6 6 2-2 4-4Z" />
-              <path d="M12 8c-3 1-5 3-7 7l5 5c4-2 6-4 7-7" />
-              <path d="M2 22s2.5-4 5-4" />
-            </svg>
+          <div className="w-11 h-11 rounded-xl overflow-hidden border border-slate-700 bg-slate-800/80 flex items-center justify-center shadow-md shadow-slate-950/30 group-hover:scale-105 transition-transform shrink-0">
+            <ImageWithFallback
+              src={SHOP_IMAGES.logo}
+              alt={`${SHOP_INFO.name} logo`}
+              placeholderType="logo"
+              className="w-full h-full object-cover"
+            />
           </div>
-          <div>
-            <div className="font-bold text-white text-base tracking-tight leading-tight flex items-center gap-1.5">
-              Paint Shop
+          <div className="min-w-0">
+            <div className="font-bold text-white text-sm sm:text-base tracking-tight leading-tight truncate">
+              {SHOP_INFO.name}
             </div>
-            <span className="text-[11px] font-semibold text-blue-400 uppercase tracking-wider">
+            <span className="text-[10px] sm:text-[11px] font-semibold text-blue-400 uppercase tracking-[0.18em]">
               Admin Portal
             </span>
           </div>
@@ -220,20 +223,6 @@ export default function AdminSidebar({ isOpen, onClose }) {
         })}
       </div>
 
-      {/* Sidebar Footer Info */}
-      <div className="p-4 border-t border-slate-800 text-xs shrink-0">
-        <div className="bg-slate-800/60 rounded-lg p-3 border border-slate-700/50">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="font-semibold text-slate-200 text-[11px] uppercase tracking-wider">
-              Single Shop Edition
-            </span>
-          </div>
-          <p className="text-[11px] text-slate-400 leading-tight">
-            Fixed shop owner & painter ecosystem.
-          </p>
-        </div>
-      </div>
     </div>
   );
 

@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { CATALOG_DATA } from './shopConfig';
+import ImageWithFallback from './ImageWithFallback';
+import { getCategoryIconType } from './shopConfig';
 
 function CategoryIcon({ type }) {
   switch (type) {
@@ -46,20 +47,77 @@ function CategoryIcon({ type }) {
         </svg>
       );
     default:
-      return null;
+      return (
+        <svg viewBox="0 0 48 48" fill="none" className="cat-icon" aria-hidden="true">
+          <rect x="8" y="10" width="32" height="28" rx="6" fill="var(--terracotta)" opacity="0.9" />
+          <path d="M16 18h16M16 24h16M16 30h10" stroke="var(--cream)" strokeWidth="2.5" strokeLinecap="round" />
+        </svg>
+      );
   }
 }
 
+const formatPrice = (value) => {
+  const amount = Number(value);
+  if (Number.isNaN(amount)) return '₹0';
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
+
+const buildCatalogFromItems = (items = []) => {
+  const categoryMap = new Map();
+
+  items.forEach((item) => {
+    if (!item || !item.category || !item.name) return;
+
+    const category = String(item.category).trim();
+    const brand = String(item.brand || 'Other').trim() || 'Other';
+
+    if (!categoryMap.has(category)) {
+      categoryMap.set(category, {
+        name: category,
+        iconType: getCategoryIconType(category),
+        brands: new Map(),
+      });
+    }
+
+    const categoryEntry = categoryMap.get(category);
+    if (!categoryEntry.brands.has(brand)) {
+      categoryEntry.brands.set(brand, []);
+    }
+
+    categoryEntry.brands.get(brand).push({
+      ...item,
+      price: Number(item.price) || 0,
+      imageUrl: item.imageUrl || '',
+    });
+  });
+
+  return [...categoryMap.values()].map((categoryEntry) => ({
+    id: categoryEntry.name,
+    name: categoryEntry.name,
+    iconType: categoryEntry.iconType,
+    brands: [...categoryEntry.brands.entries()].map(([brandName, brandItems]) => ({
+      name: brandName,
+      items: brandItems,
+    })),
+  }));
+};
+
 export default function CatalogOverlay({ isOpen, onClose }) {
+  const [catalog, setCatalog] = useState([]);
   const [currentCategory, setCurrentCategory] = useState(null);
-  const [currentCompany, setCurrentCompany] = useState(null);
+  const [currentBrand, setCurrentBrand] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const bodyRef = useRef(null);
 
-  // Manage body scroll lock & Escape key
   useEffect(() => {
     if (!isOpen) {
       setCurrentCategory(null);
-      setCurrentCompany(null);
+      setCurrentBrand(null);
       return;
     }
 
@@ -83,15 +141,42 @@ export default function CatalogOverlay({ isOpen, onClose }) {
     };
   }, [isOpen, currentCategory, onClose]);
 
-  const handleOpenCategory = (catId) => {
-    setCurrentCategory(catId);
-    const cat = CATALOG_DATA[catId];
-    if (cat?.companies) {
-      const firstCompanyKey = Object.keys(cat.companies)[0];
-      setCurrentCompany(firstCompanyKey);
-    } else {
-      setCurrentCompany(null);
-    }
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const loadCatalog = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const response = await fetch('/api/backend/items/public', { cache: 'no-store' });
+        const data = await response.json();
+        const items = Array.isArray(data) ? data : (data?.items || []);
+
+        if (!response.ok || (!Array.isArray(data) && !data?.success)) {
+          throw new Error(data?.message || 'Unable to load products right now.');
+        }
+
+        const nextCatalog = buildCatalogFromItems(items);
+        setCatalog(nextCatalog);
+        setCurrentCategory(null);
+        setCurrentBrand(null);
+      } catch (fetchError) {
+        setCatalog([]);
+        setError(fetchError?.message || 'Unable to load products right now. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadCatalog();
+  }, [isOpen]);
+
+  const handleOpenCategory = (categoryName) => {
+    setCurrentCategory(categoryName);
+    const categoryData = catalog.find((cat) => cat.name === categoryName);
+    const firstBrand = categoryData?.brands?.[0]?.name || null;
+    setCurrentBrand(firstBrand);
     if (bodyRef.current) {
       bodyRef.current.scrollTop = 0;
     }
@@ -99,7 +184,7 @@ export default function CatalogOverlay({ isOpen, onClose }) {
 
   const handleBack = () => {
     setCurrentCategory(null);
-    setCurrentCompany(null);
+    setCurrentBrand(null);
     if (bodyRef.current) {
       bodyRef.current.scrollTop = 0;
     }
@@ -107,17 +192,12 @@ export default function CatalogOverlay({ isOpen, onClose }) {
 
   if (!isOpen) return null;
 
-  const activeCategoryData = currentCategory ? CATALOG_DATA[currentCategory] : null;
+  const activeCategoryData = currentCategory
+    ? catalog.find((item) => item.name === currentCategory) || null
+    : null;
 
-  // Resolve items to render
-  let itemsToRender = [];
-  if (activeCategoryData) {
-    if (activeCategoryData.companies && currentCompany) {
-      itemsToRender = activeCategoryData.companies[currentCompany]?.items || [];
-    } else {
-      itemsToRender = activeCategoryData.items || [];
-    }
-  }
+  const activeBrandData = activeCategoryData?.brands?.find((brand) => brand.name === currentBrand) || null;
+  const itemsToRender = activeBrandData?.items || [];
 
   return (
     <div
@@ -161,86 +241,99 @@ export default function CatalogOverlay({ isOpen, onClose }) {
 
       <div className="catalog-body" ref={bodyRef}>
         <div className="wrap">
-          {/* Category View */}
           {!currentCategory ? (
             <div id="catalogCategoryView">
-              <div className="cat-tiles" id="catTiles">
-                {Object.values(CATALOG_DATA).map((cat) => (
-                  <div
-                    key={cat.id}
-                    className="cat-tile"
-                    tabIndex={0}
-                    role="button"
-                    onClick={() => handleOpenCategory(cat.id)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        handleOpenCategory(cat.id);
-                      }
-                    }}
-                  >
-                    <CategoryIcon type={cat.iconType} />
-                    <span>{cat.name}</span>
-                  </div>
-                ))}
-              </div>
+              {loading ? (
+                <div className="catalog-empty">
+                  <div className="catalog-loading">Loading products…</div>
+                </div>
+              ) : error ? (
+                <div className="catalog-empty">
+                  <div>{error}</div>
+                  <button type="button" className="catalog-retry" onClick={() => window.location.reload()}>
+                    Retry
+                  </button>
+                </div>
+              ) : catalog.length === 0 ? (
+                <div className="catalog-empty">No products are currently available.</div>
+              ) : (
+                <div className="cat-tiles" id="catTiles">
+                  {catalog.map((cat) => (
+                    <div
+                      key={cat.id}
+                      className="cat-tile"
+                      tabIndex={0}
+                      role="button"
+                      onClick={() => handleOpenCategory(cat.name)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          handleOpenCategory(cat.name);
+                        }
+                      }}
+                    >
+                      <CategoryIcon type={cat.iconType} />
+                      <span>{cat.name}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ) : (
-            /* Product View */
             <div id="catalogProductView">
-              {activeCategoryData.companies && (
-                <div className="company-row" id="companyRow" role="tablist" aria-label="Brand Companies">
-                  {Object.entries(activeCategoryData.companies).map(([compKey, compData]) => {
-                    const initials = compData.label
+              {activeCategoryData?.brands?.length ? (
+                <div className="company-row" id="companyRow" role="tablist" aria-label="Brand selection">
+                  {activeCategoryData.brands.map((brand) => {
+                    const initials = brand.name
                       .split(' ')
-                      .map((w) => w[0])
+                      .map((word) => word[0])
                       .join('')
-                      .slice(0, 2);
-                    const isActive = compKey === currentCompany;
+                      .slice(0, 2)
+                      .toUpperCase();
+                    const isActive = brand.name === currentBrand;
+
                     return (
                       <button
-                        key={compKey}
+                        key={brand.name}
                         type="button"
                         className={`company-pill ${isActive ? 'active' : ''}`}
-                        onClick={() => setCurrentCompany(compKey)}
+                        onClick={() => setCurrentBrand(brand.name)}
                         role="tab"
                         aria-selected={isActive}
                       >
-                        <span className="company-circle">{initials}</span>
-                        <span className="clabel">{compData.label}</span>
+                        <span className="company-circle">{initials || 'BR'}</span>
+                        <span className="clabel">{brand.name}</span>
                       </button>
                     );
                   })}
                 </div>
+              ) : (
+                <div className="catalog-empty">No products available in this category right now.</div>
               )}
 
               <div className="product-scroll">
                 {itemsToRender.length > 0 ? (
                   <div className="product-grid" id="productGrid">
-                    {itemsToRender.map((item, i) => (
-                      <div className="product-card" key={i}>
-                        <div
-                          className="product-img"
-                          style={{
-                            background: `linear-gradient(160deg, hsl(${item.hue},70%,60%), hsl(${item.hue},65%,40%))`,
-                          }}
-                        >
-                          <svg viewBox="0 0 40 52" fill="none" aria-hidden="true">
-                            <path d="M8 6h24v10H8z" fill="rgba(255,255,255,0.85)" />
-                            <path
-                              d="M10 16h20v28a4 4 0 0 1-4 4H14a4 4 0 0 1-4-4V16Z"
-                              fill="rgba(34,29,26,0.55)"
-                            />
-                          </svg>
+                    {itemsToRender.map((item, index) => (
+                      <div className="product-card" key={`${item._id || item.name}-${index}`}>
+                        <div className="product-img" style={{ background: `linear-gradient(160deg, #f0d6ba, #c77a3d)` }}>
+                          <ImageWithFallback
+                            src={item.imageUrl}
+                            alt={item.name}
+                            placeholderType="photo"
+                            className="product-image"
+                          />
                         </div>
                         <div className="product-info">
                           <div className="product-name">{item.name}</div>
-                          <div className="product-price">{item.price}</div>
+                          <div className="product-price">{formatPrice(item.price)}</div>
                         </div>
                       </div>
                     ))}
                   </div>
+                ) : activeCategoryData?.brands?.length ? (
+                  <div className="catalog-empty">No products available for this brand right now.</div>
                 ) : (
-                  <div className="catalog-empty">More items coming soon.</div>
+                  <div className="catalog-empty">No products are currently available.</div>
                 )}
               </div>
             </div>

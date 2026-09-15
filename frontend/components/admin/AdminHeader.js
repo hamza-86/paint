@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { logoutUser } from '@/lib/auth';
 import { useCurrentUser } from '@/lib/hooks/useCurrentUser';
+import { SHOP_INFO } from '@/components/public/shopConfig';
 
 const BREADCRUMB_MAP = {
   '/admin': 'Dashboard Overview',
@@ -60,14 +61,14 @@ export default function AdminHeader({ onOpenMobileMenu }) {
             </svg>
           </button>
 
-          <div className="flex items-center gap-2">
-            <span className="hidden sm:inline-block text-xs font-semibold text-slate-400">
-              Admin
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="hidden md:inline-block text-[10px] font-semibold text-slate-500 uppercase tracking-[0.18em]">
+              {SHOP_INFO.name}
             </span>
-            <span className="hidden sm:inline-block text-slate-300 text-xs">
+            <span className="hidden md:inline-block text-slate-300 text-xs">
               /
             </span>
-            <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+            <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight truncate">
               {currentTitle}
             </h2>
           </div>
