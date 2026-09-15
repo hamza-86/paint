@@ -29,7 +29,7 @@ export default function AdminHeader({ onOpenMobileMenu }) {
     BREADCRUMB_MAP[pathname] ||
     (pathname.startsWith('/admin/')
       ? pathname.replace('/admin/', '').charAt(0).toUpperCase() +
-        pathname.replace('/admin/', '').slice(1)
+      pathname.replace('/admin/', '').slice(1)
       : 'Admin Dashboard');
 
   const handleLogout = async () => {

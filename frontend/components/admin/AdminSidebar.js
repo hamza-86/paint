@@ -204,16 +204,14 @@ export default function AdminSidebar({ isOpen, onClose }) {
               key={item.href}
               href={item.href}
               onClick={onClose}
-              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
-                active
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${active
                   ? 'bg-blue-600 text-white font-semibold shadow-xs shadow-blue-500/20'
                   : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/70'
-              }`}
+                }`}
             >
               <span
-                className={`transition-colors shrink-0 ${
-                  active ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'
-                }`}
+                className={`transition-colors shrink-0 ${active ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'
+                  }`}
               >
                 {item.icon}
               </span>
@@ -243,9 +241,8 @@ export default function AdminSidebar({ isOpen, onClose }) {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 w-72 max-w-[85vw] z-50 transform transition-transform duration-200 ease-in-out md:hidden shadow-2xl ${
-          isOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        className={`fixed inset-y-0 left-0 w-72 max-w-[85vw] z-50 transform transition-transform duration-200 ease-in-out md:hidden shadow-2xl ${isOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
       >
         {navContent}
       </aside>
