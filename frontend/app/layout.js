@@ -1,6 +1,7 @@
 import { Geist } from 'next/font/google';
 import './globals.css';
 import QueryProvider from '@/components/providers/QueryProvider';
+import { SHOP_IMAGES } from '@/components/public/shopConfig';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -18,6 +19,10 @@ export const metadata = {
     'nerolac dealer buldhana',
     'painter rewards',
   ],
+  icons: {
+    icon: SHOP_IMAGES.logo,
+    apple: SHOP_IMAGES.logo,
+  },
 };
 
 export default function RootLayout({ children }) {

@@ -20,12 +20,8 @@
  *   In production (Vercel HTTPS), Secure + SameSite=None is kept as-is.
  */
 
-// Prefer server-only BACKEND_API_URL; fall back to NEXT_PUBLIC_API_URL for
-// backward compatibility. The BFF route is server-side only so this is safe.
-const BACKEND_API_URL =
-  process.env.BACKEND_API_URL ||
-  process.env.NEXT_PUBLIC_API_URL ||
-  'https://paint-shop-backend-xgjz.onrender.com/api';
+// The backend target is server-only. Browser code must use /api/backend instead.
+const BACKEND_API_URL = process.env.BACKEND_API_URL;
 
 // True when the Next.js server itself is running in production (Vercel HTTPS).
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
@@ -105,6 +101,13 @@ const forwardedResponseHeaders = (response) => {
  *   Target:   https://paint-shop-backend-xgjz.onrender.com/api/auth/login
  */
 async function proxyRequest(request, { params }) {
+  if (!BACKEND_API_URL) {
+    return Response.json(
+      { success: false, message: 'Backend service is not configured.' },
+      { status: 500 }
+    );
+  }
+
   const { path } = await params;
   const backendUrl = `${BACKEND_API_URL}/${path.join('/')}${
     new URL(request.url).search

@@ -114,10 +114,16 @@ export default function CatalogOverlay({ isOpen, onClose }) {
   const [error, setError] = useState(null);
   const bodyRef = useRef(null);
 
+  const handleBack = () => {
+    setCurrentCategory(null);
+    setCurrentBrand(null);
+    if (bodyRef.current) {
+      bodyRef.current.scrollTop = 0;
+    }
+  };
+
   useEffect(() => {
     if (!isOpen) {
-      setCurrentCategory(null);
-      setCurrentBrand(null);
       return;
     }
 
@@ -177,14 +183,6 @@ export default function CatalogOverlay({ isOpen, onClose }) {
     const categoryData = catalog.find((cat) => cat.name === categoryName);
     const firstBrand = categoryData?.brands?.[0]?.name || null;
     setCurrentBrand(firstBrand);
-    if (bodyRef.current) {
-      bodyRef.current.scrollTop = 0;
-    }
-  };
-
-  const handleBack = () => {
-    setCurrentCategory(null);
-    setCurrentBrand(null);
     if (bodyRef.current) {
       bodyRef.current.scrollTop = 0;
     }

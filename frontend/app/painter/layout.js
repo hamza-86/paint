@@ -1,7 +1,7 @@
 import PainterNavbar from '@/components/painter/PainterNavbar';
 
 export const metadata = {
-  title: 'Painter Portal | Paint Shop Platform',
+  title: 'Painter Portal | Harun Aziz Paints & Tools',
   description: 'View your points, sales history, reward tiers, and physical rewards.',
 };
 
@@ -13,7 +13,7 @@ export default function PainterLayout({ children }) {
         {children}
       </main>
       <footer className="border-t border-slate-900 py-6 text-center text-xs text-slate-500">
-        Paint Shop Painter Reward Platform — Read-Only Painter Portal
+        Harun Aziz Paints & Tools — Read-Only Painter Portal
       </footer>
     </div>
   );

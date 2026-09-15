@@ -52,15 +52,15 @@ Backend will run on `http://localhost:5000` (Health check: `GET http://localhost
 cd frontend
 npm install
 cp .env.local.example .env.local
-# Set NEXT_PUBLIC_API_URL=http://localhost:5000/api
+# Set BACKEND_API_URL=https://paint-shop-backend-xgjz.onrender.com/api
 npm run dev
 ```
 
 Frontend will run on `http://localhost:3000`.
 
-For a deployed frontend, set `NEXT_PUBLIC_API_URL` to the backend API URL, for
-example `https://paint-shop-backend-xgjz.onrender.com/api`. The frontend proxy
-uses that live backend URL by default when the variable is not configured.
+For a deployed frontend, set the server-only `BACKEND_API_URL` environment
+variable to `https://paint-shop-backend-xgjz.onrender.com/api`. Browser requests
+continue to use the Next.js BFF at `/api/backend/*`.
 
 ---
 
@@ -68,3 +68,31 @@ uses that live backend URL by default when the variable is not configured.
 
 - **Backend**: Deploy as a Web Service on **Render** (`Root Directory: backend`, `Build Command: npm install`, `Start Command: npm start`).
 - **Frontend**: Deploy on **Vercel** or Render Static/Node (`Root Directory: frontend`).
+
+### Production Environment Variables
+
+Set this server-only variable in Vercel for the frontend:
+
+| Variable | Purpose | Secret |
+|---|---|---|
+| `BACKEND_API_URL` | Render API base URL used by the Next.js BFF | No |
+
+Set these variables in Render for the backend:
+
+| Variable | Purpose | Secret |
+|---|---|---|
+| `NODE_ENV` | Set to `production` | No |
+| `PORT` | Render-provided HTTP port | No |
+| `MONGODB_URI` | Production MongoDB Atlas connection string | Yes |
+| `JWT_SECRET` | Signs and verifies authentication tokens | Yes |
+| `JWT_EXPIRES_IN` | JWT lifetime, such as `1d` | No |
+| `JWT_COOKIE_EXPIRES_DAYS` | Authentication cookie lifetime | No |
+| `CLOUDINARY_CLOUD_NAME` | Cloudinary account name | No |
+| `CLOUDINARY_API_KEY` | Cloudinary upload API key | Yes |
+| `CLOUDINARY_API_SECRET` | Cloudinary upload secret | Yes |
+| `FRONTEND_URL` | Deployed Vercel origin allowed by CORS | No |
+| `RESEND_API_KEY` | Resend HTTPS API key for OTP email | Yes |
+| `EMAIL_FROM` | Verified OTP sender identity | No |
+
+The browser calls `/api/backend/*`; it never calls the Render URL directly.
+Do not add backend secrets or `NEXT_PUBLIC_` backend URLs to Vercel.

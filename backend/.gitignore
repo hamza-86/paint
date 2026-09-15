@@ -3,6 +3,8 @@ node_modules/
 
 # Environment variables — NEVER commit this file
 .env
+.env.production
+.env*.local
 
 # Build / logs
 *.log

@@ -121,11 +121,16 @@ curl http://localhost:5000/api/health
 | `PORT` | Port to listen on (Render sets this automatically) |
 | `NODE_ENV` | `development` or `production` |
 | `MONGODB_URI` | MongoDB Atlas connection string |
+| `MONGODB_TEST_URI` | Isolated MongoDB connection string used only by test runs |
 | `JWT_SECRET` | Secret for signing/verifying JWTs |
+| `JWT_EXPIRES_IN` | JWT lifetime, for example `1d` |
+| `JWT_COOKIE_EXPIRES_DAYS` | Authentication cookie lifetime in days |
 | `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name |
 | `CLOUDINARY_API_KEY` | Cloudinary API key |
 | `CLOUDINARY_API_SECRET` | Cloudinary API secret |
 | `FRONTEND_URL` | Frontend origin allowed by CORS |
+| `RESEND_API_KEY` | Server-only Resend API key for OTP email |
+| `EMAIL_FROM` | Verified sender identity for OTP email |
 
 ---
 
