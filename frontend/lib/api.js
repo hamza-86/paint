@@ -800,6 +800,14 @@ export function getPainterPortalRewardByIdApi(id) {
   return apiFetch(`/painter-portal/rewards/${id}`);
 }
 
+/**
+ * GET /api/painter-portal/reward-tiers
+ * Returns all active reward tiers sorted by minPoints ascending (painter-safe, read-only)
+ */
+export function getPainterPortalRewardTiersApi() {
+  return apiFetch('/painter-portal/reward-tiers');
+}
+
 // ── Dashboard & Reporting endpoints (Part 14) ────────────────────────────────
 
 /**

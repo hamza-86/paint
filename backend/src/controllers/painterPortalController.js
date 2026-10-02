@@ -591,6 +591,36 @@ export async function getRewardById(req, res, next) {
   }
 }
 
+// ── GET /api/painter-portal/reward-tiers ──────────────────────────────────────
+
+/**
+ * Returns all active RewardTier records sorted by minPoints ascending.
+ * Painter-safe: only exposes minPoints, maxPoints, suggestedRewardName.
+ * Does NOT expose internal IDs, inventory quantities, or admin-only fields.
+ */
+export async function getActiveRewardTiers(req, res, next) {
+  try {
+    const tiers = await RewardTier.find({ status: 'active' })
+      .populate('suggestedInventoryItemId', 'imageUrl')
+      .sort({ minPoints: 1, maxPoints: 1 });
+
+    const safeTiers = tiers.map((t) => ({
+      id: String(t._id),
+      minPoints: t.minPoints,
+      maxPoints: t.maxPoints,
+      suggestedRewardName: t.suggestedRewardName,
+      imageUrl: t.suggestedInventoryItemId?.imageUrl || '',
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: safeTiers,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 // ── GET /api/painter-portal/cycles ────────────────────────────────────────────
 
 export async function getCycles(req, res, next) {

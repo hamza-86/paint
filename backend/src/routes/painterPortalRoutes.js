@@ -9,6 +9,7 @@ import {
   getEligibility,
   getCycles,
   getRewardById,
+  getActiveRewardTiers,
 } from '../controllers/painterPortalController.js';
 
 const router = express.Router();
@@ -59,6 +60,7 @@ router.get('/sales', getSales);
 router.get('/rewards', getRewards);
 router.get('/eligibility', getEligibility);
 router.get('/cycles', getCycles);
+router.get('/reward-tiers', getActiveRewardTiers);
 router.get('/rewards/:id', getRewardById);
 
 // Strictly reject any mutation requests with 404

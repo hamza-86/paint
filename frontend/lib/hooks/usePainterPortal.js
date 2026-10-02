@@ -14,6 +14,7 @@ import {
   getPainterPortalEligibilityApi,
   getPainterPortalCyclesApi,
   getPainterPortalRewardByIdApi,
+  getPainterPortalRewardTiersApi,
 } from '../api';
 
 // ── Query Keys ────────────────────────────────────────────────────────────────
@@ -26,6 +27,7 @@ export const PAINTER_PORTAL_KEYS = {
   rewardDetail: (id) => [...PAINTER_PORTAL_KEYS.all, 'reward', id],
   eligibility: () => [...PAINTER_PORTAL_KEYS.all, 'eligibility'],
   cycles: () => [...PAINTER_PORTAL_KEYS.all, 'cycles'],
+  rewardTiers: () => [...PAINTER_PORTAL_KEYS.all, 'reward-tiers'],
 };
 
 // ── Read-Only Query Hooks ─────────────────────────────────────────────────────
@@ -104,6 +106,18 @@ export function usePainterPortalReward(id) {
     queryKey: PAINTER_PORTAL_KEYS.rewardDetail(id),
     queryFn: () => getPainterPortalRewardByIdApi(id),
     enabled: Boolean(id),
+    staleTime: 60_000,
+  });
+}
+
+/**
+ * Fetch all active reward tiers for the painter roadmap, sorted by minPoints asc.
+ * Uses the read-only /painter-portal/reward-tiers endpoint.
+ */
+export function usePainterPortalRewardTiers() {
+  return useQuery({
+    queryKey: PAINTER_PORTAL_KEYS.rewardTiers(),
+    queryFn: getPainterPortalRewardTiersApi,
     staleTime: 60_000,
   });
 }
